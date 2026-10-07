@@ -4,14 +4,14 @@ import { shade } from '../lib/color';
 import type { KnitChart } from '../lib/knitChart';
 import { renderScarf, type ScarfRenderOptions } from '../lib/scarfRender';
 import { useSettings } from '../store/settingsStore';
-import { Seg, Slider } from './Field';
-
-type Mode = 'auto' | 'manual';
+import { Slider } from './Field';
 
 interface Props {
   chart: KnitChart;
   options: ScarfRenderOptions;
   onDone?: () => void;
+  /** Skip the animation and show the finished scarf. */
+  onJump?: () => void;
 }
 
 interface Particle { x: number; y: number; vx: number; vy: number; color: string; rot: number; life: number }
@@ -19,28 +19,34 @@ interface Particle { x: number; y: number; vx: number; vy: number; color: string
 const HEIGHT = 600;
 const BED_Y = 150;
 const BED_H = 24;
-const KEY_SPEED = 520; // px per second when steering with the keyboard
+const ARROW_SPEED = 520; // px/s when pushing the carriage with ← →
+const HOLD_PASSES = 1.6; // passes/s while space is held
+const TAP_PASS = 0.25; // fraction of a pass per typed key
+const TAP_PASSES = 2.2; // passes/s at which typed keys are worked off
 
 /**
  * A cute flat-bed knitting machine. The carriage slides across the needle bed;
- * every pass knits a few rows and the scarf grows out underneath. In manual mode
- * the user pushes the carriage (drag, arrow keys / A D, or the mouse wheel).
+ * every pass knits a few rows and the scarf grows out underneath. It runs by
+ * itself (auto), or the user helps: hold space or type anything to knit,
+ * ← → or drag to push the carriage by hand.
  */
-export function KnittingMachine({ chart, options, onDone }: Props) {
+export function KnittingMachine({ chart, options, onDone, onJump }: Props) {
   const { t } = useTranslation();
   const accent = useSettings((s) => s.accent);
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [mode, setMode] = useState<Mode>('auto');
   const [playing, setPlaying] = useState(true);
   const [speed, setSpeed] = useState(2);
   const [display, setDisplay] = useState({ rows: 0, done: false });
   const [width, setWidth] = useState(720);
 
   // Mutable animation state (kept out of React to avoid re-rendering every frame).
-  const sim = useRef({ rows: 0, carX: 0, dir: 1, keys: new Set<string>(), dragging: false, done: false, particles: [] as Particle[], blink: 0, bounce: 0 });
-  const cfg = useRef({ mode, playing, speed, onDone });
-  cfg.current = { mode, playing, speed, onDone };
+  const sim = useRef({
+    rows: 0, carX: 0, dir: 1, arrows: new Set<string>(), space: false, pending: 0,
+    dragging: false, done: false, particles: [] as Particle[], blink: 0, bounce: 0,
+  });
+  const cfg = useRef({ playing, speed, onDone });
+  cfg.current = { playing, speed, onDone };
 
   const sp = Math.max(3, Math.min(12, Math.floor(Math.min(340, width * 0.55) / chart.w)));
   const fabric = useMemo(
@@ -71,6 +77,7 @@ export function KnittingMachine({ chart, options, onDone }: Props) {
   const restart = () => {
     const s = sim.current;
     s.rows = 0;
+    s.pending = 0;
     s.done = false;
     s.particles = [];
     setDisplay({ rows: 0, done: false });
@@ -88,26 +95,38 @@ export function KnittingMachine({ chart, options, onDone }: Props) {
     return () => ro.disconnect();
   }, []);
 
-  // Keyboard steering.
+  // Keyboard: space (hold) or any typed key knits; ← → push the carriage by hand.
   useEffect(() => {
+    const ignore = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName;
+      return tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || e.metaKey || e.ctrlKey || e.altKey;
+    };
     const down = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement).tagName === 'INPUT') return;
-      const k = e.key.toLowerCase();
-      if (['arrowleft', 'arrowright', 'a', 'd'].includes(k)) {
+      if (ignore(e)) return;
+      const s = sim.current;
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
         e.preventDefault();
-        if (cfg.current.mode !== 'manual') setMode('manual');
-        sim.current.keys.add(k);
-      } else if (k === ' ' && cfg.current.mode === 'auto') {
+        s.arrows.add(e.key);
+        setPlaying(false);
+      } else if (e.key === ' ') {
         e.preventDefault();
-        setPlaying((p) => !p);
+        s.space = true;
+      } else if (e.key.length === 1 || e.key === 'Backspace') {
+        s.pending += TAP_PASS;
       }
     };
-    const up = (e: KeyboardEvent) => sim.current.keys.delete(e.key.toLowerCase());
+    const up = (e: KeyboardEvent) => {
+      if (e.key === ' ') sim.current.space = false;
+      sim.current.arrows.delete(e.key);
+    };
+    const blur = () => { sim.current.space = false; sim.current.arrows.clear(); };
     window.addEventListener('keydown', down);
     window.addEventListener('keyup', up);
+    window.addEventListener('blur', blur);
     return () => {
       window.removeEventListener('keydown', down);
       window.removeEventListener('keyup', up);
+      window.removeEventListener('blur', blur);
     };
   }, []);
 
@@ -153,27 +172,40 @@ export function KnittingMachine({ chart, options, onDone }: Props) {
       if (s.rows >= chart.h) finish();
     };
 
+    /** Slide along the bed, turning around at the ends (slowing a little near them). */
+    const glide = (dist: number) => {
+      let guard = 0;
+      while (dist > 0.01 && !s.done && guard++ < 8) {
+        const room = s.dir > 0 ? maxX - s.carX : s.carX - minX;
+        if (room <= 0.5) { s.dir = -s.dir; continue; }
+        const ease = 0.35 + 0.65 * Math.min(1, room / 40);
+        const step = Math.min(room, dist * ease);
+        s.carX += s.dir * step;
+        advance(s.dir * step);
+        dist -= step / ease;
+      }
+    };
+
     const frame = (now: number) => {
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
-      const { mode: m, playing: p, speed: v } = cfg.current;
+      const { playing: p, speed: v } = cfg.current;
 
       if (!s.done) {
-        if (m === 'auto' && p) {
-          s.rows = Math.min(chart.h, s.rows + dt * v * rowsPerPass);
-          const passes = s.rows / rowsPerPass;
-          const pass = Math.floor(passes);
-          const f = 0.5 - 0.5 * Math.cos(Math.PI * (passes - pass));
-          const nx = pass % 2 === 0 ? minX + f * travel : maxX - f * travel;
-          s.dir = Math.sign(nx - s.carX) || s.dir;
-          s.carX = nx;
-          s.bounce = 1;
-          if (s.rows >= chart.h) finish();
-        } else if (m === 'manual' && s.keys.size) {
-          const left = s.keys.has('arrowleft') || s.keys.has('a');
-          const right = s.keys.has('arrowright') || s.keys.has('d');
-          const dx = (right ? 1 : 0) - (left ? 1 : 0);
-          const nx = Math.max(minX, Math.min(maxX, s.carX + dx * KEY_SPEED * dt));
+        // Distance (in passes) the carriage travels on its own this frame.
+        let passes = 0;
+        if (p) passes += v * dt;
+        if (s.space) passes += HOLD_PASSES * dt;
+        if (s.pending > 0) {
+          const take = Math.min(s.pending, TAP_PASSES * dt);
+          s.pending -= take;
+          passes += take;
+        }
+        if (passes > 0) glide(passes * travel);
+        // Arrow keys push it by hand.
+        const dx = (s.arrows.has('ArrowRight') ? 1 : 0) - (s.arrows.has('ArrowLeft') ? 1 : 0);
+        if (dx) {
+          const nx = Math.max(minX, Math.min(maxX, s.carX + dx * ARROW_SPEED * dt));
           advance(nx - s.carX);
           s.carX = nx;
         }
@@ -356,7 +388,7 @@ export function KnittingMachine({ chart, options, onDone }: Props) {
     const onDown = (e: PointerEvent) => {
       s.dragging = true;
       canvas.setPointerCapture(e.pointerId);
-      if (cfg.current.mode !== 'manual') setMode('manual');
+      setPlaying(false);
     };
     const onMove = (e: PointerEvent) => {
       if (!s.dragging || s.done) return;
@@ -365,18 +397,10 @@ export function KnittingMachine({ chart, options, onDone }: Props) {
       s.carX = nx;
     };
     const onUp = () => { s.dragging = false; };
-    const onWheel = (e: WheelEvent) => {
-      if (cfg.current.mode !== 'manual' || s.done) return;
-      e.preventDefault();
-      const nx = Math.max(minX, Math.min(maxX, s.carX + (e.deltaY + e.deltaX) * 0.6));
-      advance(nx - s.carX);
-      s.carX = nx;
-    };
     canvas.addEventListener('pointerdown', onDown);
     canvas.addEventListener('pointermove', onMove);
     canvas.addEventListener('pointerup', onUp);
     canvas.addEventListener('pointercancel', onUp);
-    canvas.addEventListener('wheel', onWheel, { passive: false });
     raf = requestAnimationFrame(frame);
     return () => {
       cancelAnimationFrame(raf);
@@ -384,7 +408,6 @@ export function KnittingMachine({ chart, options, onDone }: Props) {
       canvas.removeEventListener('pointermove', onMove);
       canvas.removeEventListener('pointerup', onUp);
       canvas.removeEventListener('pointercancel', onUp);
-      canvas.removeEventListener('wheel', onWheel);
     };
   }, [chart, fabric, sp, width, accent, cones, rowYarn, rowsPerPass]);
 
@@ -392,28 +415,21 @@ export function KnittingMachine({ chart, options, onDone }: Props) {
 
   return (
     <div className="machine">
-      <div className="toolbar">
-        <Seg<Mode>
-          value={mode}
-          onChange={(m) => { setMode(m); if (m === 'auto') setPlaying(true); }}
-          options={[{ value: 'auto', label: `🤖 ${t('machine.auto')}` }, { value: 'manual', label: `✋ ${t('machine.manual')}` }]}
-        />
-        {mode === 'auto' && !display.done && (
-          <button className="btn small" onClick={() => setPlaying((p) => !p)}>{playing ? `⏸ ${t('machine.pause')}` : `▶ ${t('machine.play')}`}</button>
-        )}
-        {mode === 'auto' && (
-          <div style={{ width: 150 }}>
-            <Slider label={t('machine.speed')} value={speed} min={0.5} max={8} step={0.5} onChange={setSpeed} format={(v) => `${v}×`} />
-          </div>
-        )}
-        <button className="btn small ghost" onClick={restart}>↺ {t('machine.restart')}</button>
+      <div className="machine-actions">
         {!display.done && (
-          <button className="btn small ghost" onClick={() => { sim.current.rows = chart.h - 0.01; setMode('auto'); setPlaying(true); }}>⏭ {t('machine.skip')}</button>
+          <button className="btn primary big" onClick={() => setPlaying((p) => !p)}>
+            {playing ? `⏸ ${t('machine.pause')}` : `▶ ${t('machine.auto')}`}
+          </button>
         )}
+        <button className={`btn big ${display.done ? 'primary' : ''}`} onClick={() => onJump?.()}>⏭ {t('machine.jump')}</button>
+        <div style={{ width: 180 }}>
+          <Slider label={t('machine.speed')} value={speed} min={0.5} max={8} step={0.5} onChange={setSpeed} format={(v) => `${v}×`} />
+        </div>
+        <button className="btn small ghost" onClick={restart}>↺ {t('machine.restart')}</button>
       </div>
-      <p className="hint">{mode === 'manual' ? t('machine.manualHint') : t('machine.autoHint')}</p>
+      <p className="hint">⌨️ {t('machine.hint')}</p>
       <div ref={wrapRef} className="machine-stage">
-        <canvas ref={canvasRef} style={{ touchAction: 'none', cursor: mode === 'manual' ? 'ew-resize' : 'pointer' }} />
+        <canvas ref={canvasRef} style={{ touchAction: 'none', cursor: 'ew-resize' }} />
         {display.done && <div className="machine-done">🎉 {t('machine.done')}</div>}
       </div>
       <div className="progress">

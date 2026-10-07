@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ActionRail, More } from '../components/ActionRail';
 import { Check, Seg, Slider } from '../components/Field';
 import { GridCanvas, drawGrid, type BeadStyle } from '../components/GridCanvas';
 import { PaletteEditor } from '../components/PaletteEditor';
@@ -177,12 +178,8 @@ export function EditStep() {
   const isActive = (c: PaletteColor) => !!active && active.hex.toLowerCase() === c.hex.toLowerCase();
 
   return (
-    <div className="step-layout">
+    <div className="step-layout three">
       <div className="panel sidebar">
-        <button className="btn primary" onClick={() => apply((g) => compactGrid(despeckle(autoRemoveBackground(g))))}>✨ {t('edit.autoTidy')}</button>
-        <p className="hint">{t('edit.autoTidyHint')}</p>
-        <div className="divider" />
-
         <h3>{t('edit.paintWith')}</h3>
         <div className="row" style={{ display: 'flex', gap: 6 }}>
           <PaletteSelect value={paletteId} onChange={setPaletteId} allowAuto={false} extra={{ value: PATTERN_PALETTE, label: `🟥 ${t('edit.patternColors')}` }} />
@@ -218,8 +215,7 @@ export function EditStep() {
         </div>
         <button className="btn small ghost" onClick={() => apply(compactGrid)} title={t('edit.cleanHint')}>{t('edit.clean')}</button>
 
-        <div className="divider" />
-        <h3>{t('edit.canvas')}</h3>
+        <More title={t('edit.canvas')}>
         {edgeBtn('top', t('edit.top'))}
         {edgeBtn('bottom', t('edit.bottom'))}
         {edgeBtn('left', t('edit.left'))}
@@ -230,17 +226,15 @@ export function EditStep() {
           <button className="btn small" onClick={() => apply(rotate90)}>⟳ 90°</button>
           <button className="btn small" onClick={() => apply(cropToContent)}>✂ {t('edit.trim')}</button>
         </div>
-        <div className="divider" />
+        </More>
+        <More title={t('edit.saveLoad')}>
         <div className="btn-row">
           <button className="btn small" onClick={exportPng}>⬇ PNG</button>
           <button className="btn small" onClick={() => downloadJson(grid, 'bead-pattern.json')}>⬇ JSON</button>
           <button className="btn small ghost" onClick={() => importRef.current?.click()}>⬆ {t('edit.import')}</button>
           <input ref={importRef} type="file" accept="application/json,.json" hidden onChange={(e) => importJson(e.target.files?.[0])} />
         </div>
-        <div className="footer-nav">
-          <button className="btn" onClick={() => goTo(1)}>← {t('common.back')}</button>
-          <button className="btn primary" onClick={() => goTo(3)}>{t('edit.confirm')} →</button>
-        </div>
+        </More>
       </div>
 
       <div className="panel">
@@ -284,6 +278,15 @@ export function EditStep() {
           />
         </div>
       </div>
+      <ActionRail
+        autoLabel={t('edit.autoTidy')}
+        autoHint={t('edit.autoTidyHint')}
+        onAuto={() => apply((g) => compactGrid(despeckle(autoRemoveBackground(g))))}
+        back={() => goTo(1)}
+        next={{ label: t('edit.confirm'), onClick: () => goTo(3) }}
+      >
+        <p className="hint">💡 {t('edit.railTip')}</p>
+      </ActionRail>
       <PaletteEditor
         open={editor.open}
         paletteId={editor.id}

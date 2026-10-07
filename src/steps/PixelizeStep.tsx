@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ActionRail, More } from '../components/ActionRail';
 import { Check, NumberField, Seg, Slider } from '../components/Field';
 import { GridCanvas, type BeadStyle } from '../components/GridCanvas';
 import { PaletteEditor } from '../components/PaletteEditor';
@@ -94,25 +95,16 @@ export function PixelizeStep() {
   };
 
   return (
-    <div className="step-layout">
+    <div className="step-layout three">
       <div className="panel sidebar">
         <h3>{t('pixelize.title')}</h3>
-        <button className="btn primary" onClick={autoAll} disabled={!cropped}>✨ {t('pixelize.autoAll')}</button>
-        {note && <p className="hint">{note}</p>}
         <p className="hint">{t('pixelize.hint')}</p>
         <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
           <NumberField label={t('pixelize.width')} value={o.gridW} min={2} max={200} onChange={setW} />
           <span style={{ paddingBottom: 8 }}>×</span>
           <NumberField label={t('pixelize.height')} value={o.gridH} min={2} max={200} onChange={setH} />
         </div>
-        <div className="btn-row">
-          <button className="btn small" onClick={detect}>🔍 {t('pixelize.autoDetect')}</button>
-          {[29, 50].map((n) => (
-            <button key={n} className="btn small ghost" onClick={() => setPixelOptions({ gridW: n, gridH: n })}>{n}×{n}</button>
-          ))}
-        </div>
-        <Check label={t('pixelize.lockAspect')} checked={o.lock} onChange={(v) => setPixelOptions({ lock: v })} />
-        <div className="divider" />
+        <button className="btn small" onClick={detect}>🔍 {t('pixelize.autoDetect')}</button>
         <label className="field">
           {t('pixelize.palette')}
           <div className="row">
@@ -126,35 +118,31 @@ export function PixelizeStep() {
             </button>
           </div>
         </label>
-        <p className="hint">{o.paletteId.startsWith(CUSTOM_PREFIX) ? t('palette.editHint') : t('palette.createHint')}</p>
         <Slider label={t('pixelize.maxColors')} value={o.maxColors} min={2} max={32} onChange={(v) => setPixelOptions({ maxColors: v })} />
-        <Slider label={t('pixelize.sample')} value={o.sample} min={0.2} max={1} step={0.05} onChange={(v) => setPixelOptions({ sample: v })} format={(v) => `${Math.round(v * 100)}%`} />
-        <div className="divider" />
         <Check label={t('pixelize.removeBg')} checked={o.removeBg} onChange={(v) => setPixelOptions({ removeBg: v })} />
-        {o.removeBg && (
-          <>
-            <Slider
-              label={t('pixelize.bgTolerance')}
-              value={o.bgTol}
-              min={0}
-              max={40}
-              onChange={(v) => setPixelOptions({ bgTol: v })}
-              format={(v) => (v === 0 ? t('common.auto') : String(v))}
-            />
-            <Check label={t('pixelize.removeEnclosed')} checked={o.removeEnclosed} onChange={(v) => setPixelOptions({ removeEnclosed: v })} />
-            <p className="hint">{t('pixelize.bgHint')}</p>
-          </>
-        )}
-        <div className="divider" />
-        <div className="stats">
-          <div className="stat"><b>{preview ? `${preview.w}×${preview.h}` : '–'}</b><span>{t('pixelize.size')}</span></div>
-          <div className="stat"><b>{preview?.colors.length ?? '–'}</b><span>{t('pixelize.colors')}</span></div>
-          <div className="stat"><b>{beads}</b><span>{t('pixelize.beads')}</span></div>
-        </div>
-        <div className="footer-nav">
-          <button className="btn" onClick={() => goTo(0)}>← {t('common.back')}</button>
-          <button className="btn primary" onClick={confirm} disabled={!preview}>{t('pixelize.confirm')} →</button>
-        </div>
+        <More title={t('common.more')}>
+          <div className="btn-row">
+            {[29, 50].map((n) => (
+              <button key={n} className="btn small ghost" onClick={() => setPixelOptions({ gridW: n, gridH: n })}>{n}×{n}</button>
+            ))}
+          </div>
+          <Check label={t('pixelize.lockAspect')} checked={o.lock} onChange={(v) => setPixelOptions({ lock: v })} />
+          <Slider label={t('pixelize.sample')} value={o.sample} min={0.2} max={1} step={0.05} onChange={(v) => setPixelOptions({ sample: v })} format={(v) => `${Math.round(v * 100)}%`} />
+          {o.removeBg && (
+            <>
+              <Slider
+                label={t('pixelize.bgTolerance')}
+                value={o.bgTol}
+                min={0}
+                max={40}
+                onChange={(v) => setPixelOptions({ bgTol: v })}
+                format={(v) => (v === 0 ? t('common.auto') : String(v))}
+              />
+              <Check label={t('pixelize.removeEnclosed')} checked={o.removeEnclosed} onChange={(v) => setPixelOptions({ removeEnclosed: v })} />
+            </>
+          )}
+          <p className="hint">{o.paletteId.startsWith(CUSTOM_PREFIX) ? t('palette.editHint') : t('palette.createHint')}</p>
+        </More>
       </div>
       <div className="panel">
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
@@ -171,6 +159,21 @@ export function PixelizeStep() {
           </div>
         </div>
       </div>
+      <ActionRail
+        autoLabel={t('pixelize.autoAll')}
+        autoHint={note || t('pixelize.autoHint')}
+        onAuto={autoAll}
+        autoDisabled={!cropped}
+        back={() => goTo(0)}
+        next={{ label: t('pixelize.confirm'), onClick: confirm, disabled: !preview }}
+      >
+        <div className="stats">
+          <div className="stat"><b>{preview ? `${preview.w}×${preview.h}` : '–'}</b><span>{t('pixelize.size')}</span></div>
+          <div className="stat"><b>{preview?.colors.length ?? '–'}</b><span>{t('pixelize.colors')}</span></div>
+          <div className="stat"><b>{beads}</b><span>{t('pixelize.beads')}</span></div>
+        </div>
+        {o.removeBg && <p className="hint">{t('pixelize.bgHint')}</p>}
+      </ActionRail>
       <PaletteEditor
         open={editor.open}
         paletteId={editor.id}

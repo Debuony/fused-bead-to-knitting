@@ -14,7 +14,8 @@
     "back": "Back",
     "next": "Next",
     "reset": "Reset",
-    "auto": "Auto"
+    "auto": "Auto",
+    "more": "More settings"
   },
   "upload": {
     "title": "Upload a photo of your bead art",
@@ -70,7 +71,8 @@
     "autoDone": "Auto: {{w}} × {{h}} beads, {{n}} colours.",
     "autoDoneGuess": "Auto: couldn’t see the bead grid, guessed {{w}} × {{h}} — please check. {{n}} colours.",
     "removeEnclosed": "Also remove background inside the motif",
-    "bgHint": "Leftover background? Fix it in the next step with the 🪄 magic eraser."
+    "bgHint": "Leftover background? Fix it in the next step with the 🪄 magic eraser.",
+    "autoHint": "Finds the bead grid, the number of colours and the background for you."
   },
   "edit": {
     "colors": "Colours",
@@ -119,7 +121,9 @@
     "paintWith": "Paint with",
     "patternColors": "Colours in this pattern",
     "photoOverlay": "Photo",
-    "opacity": "Opacity"
+    "opacity": "Opacity",
+    "saveLoad": "Save / load pattern",
+    "railTip": "Tip: the 🪄 magic eraser wipes out a whole background area in one click."
   },
   "chart": {
     "gauge": "Yarn & gauge",
@@ -132,7 +136,7 @@
     "motifRows": "Motif height: {{rows}} rows",
     "scarfWidth": "Scarf width",
     "length": "Scarf length",
-    "placement": "Motif placement",
+    "placement": "Where do the motifs go?",
     "ends": "Both ends",
     "center": "Centre",
     "repeat": "Repeat",
@@ -163,7 +167,9 @@
     "tipIntarsia": "Tip: with many colours, intarsia or duplicate stitch (embroidering the motif afterwards) is easier than stranded colourwork.",
     "tipStranded": "Tip: with few colours this works well as stranded (Fair Isle) colourwork, or intarsia for large blocks.",
     "auto": "Auto layout",
-    "autoHint": "Picks a matching main yarn and a classic layout from your defaults."
+    "autoHint": "Picks a matching main yarn and a classic layout from your defaults.",
+    "sizeTitle": "Size",
+    "stsRowsShort": "sts × rows"
   },
   "scarf": {
     "title": "Scarf preview",
@@ -184,7 +190,8 @@
     "new": "New project",
     "newConfirm": "Start a new project? Your current pattern will be cleared.",
     "machineView": "Knitting machine",
-    "finalView": "Finished scarf"
+    "finalView": "Finished scarf",
+    "texture": "Texture & look"
   },
   "settings": {
     "title": "Settings",
@@ -251,16 +258,13 @@
     "none": "No palettes yet."
   },
   "machine": {
-    "auto": "Auto",
-    "manual": "Manual",
+    "auto": "Auto-knit",
     "pause": "Pause",
-    "play": "Play",
     "speed": "Speed",
     "restart": "Restart",
-    "skip": "Finish now",
-    "autoHint": "The machine knits by itself. Space = pause. Want to help? Drag the carriage, use ← → / A D, or scroll.",
-    "manualHint": "Push the carriage back and forth: drag it, hold ← → (or A / D), or scroll. Every pass knits a few rows!",
     "done": "Your scarf is ready!",
-    "rows": "Row {{n}} / {{total}}"
+    "rows": "Row {{n}} / {{total}}",
+    "jump": "Jump to the finished scarf",
+    "hint": "Help the machine: hold SPACE or just type anything to knit · ← → push the carriage · or drag it."
   }
 }

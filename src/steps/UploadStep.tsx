@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ActionRail } from '../components/ActionRail';
 import { Slider } from '../components/Field';
 import { autoCrop } from '../lib/auto';
 import { runFullAuto } from '../lib/autoPipeline';
@@ -153,15 +154,8 @@ export function UploadStep() {
   }
 
   return (
-    <div className="step-layout">
+    <div className="step-layout three">
       <div className="panel sidebar">
-        <button className="btn primary big" onClick={oneClick} disabled={busy}>
-          {busy ? `⏳ ${t('upload.working')}` : `✨ ${t('upload.oneClick')}`}
-        </button>
-        <p className="hint">{t('upload.oneClickHint')}</p>
-        {bgQuality === 'busy' && <div className="warn">⚠️ {t('upload.busyBg')}</div>}
-        {error && <div className="warn">{error}</div>}
-        <div className="divider" />
         <h3>{t('upload.adjust')}</h3>
         <p className="hint">{t('upload.cropHint')}</p>
         <Slider label={t('upload.rotate')} value={rotation} min={-45} max={45} step={0.5} onChange={(v) => setTransform({ rotation: v })} format={(v) => `${v}°`} />
@@ -170,11 +164,9 @@ export function UploadStep() {
           <button className="btn small" onClick={() => setTransform({ rotation: ((rotation + 90 + 540) % 360) - 180 })}>⟳ 90°</button>
           <button className="btn small ghost" onClick={() => setTransform({ rotation: 0, crop: FULL_CROP })}>{t('common.reset')}</button>
         </div>
-        <button className="btn small" onClick={doAutoCrop}>✨ {t('upload.autoCrop')}</button>
         <div className="divider" />
         <button className="btn" onClick={() => fileRef.current?.click()}>{t('upload.replace')}</button>
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => handleFile(e.target.files?.[0])} />
-        <button className="btn" onClick={() => goTo(1)}>{t('upload.manual')} →</button>
       </div>
       <div className="panel">
         <div className="stage center">
@@ -193,6 +185,17 @@ export function UploadStep() {
           </div>
         </div>
       </div>
+      <ActionRail
+        autoLabel={t('upload.oneClick')}
+        autoHint={t('upload.oneClickHint')}
+        onAuto={oneClick}
+        autoBusy={busy}
+        next={{ label: t('upload.manual'), onClick: () => goTo(1) }}
+      >
+        <button className="btn" onClick={doAutoCrop}>✂ {t('upload.autoCrop')}</button>
+        {bgQuality === 'busy' && <div className="warn">⚠️ {t('upload.busyBg')}</div>}
+        {error && <div className="warn">{error}</div>}
+      </ActionRail>
     </div>
   );
 }

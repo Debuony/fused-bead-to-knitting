@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { More } from '../components/ActionRail';
 import { Check, Seg, Slider } from '../components/Field';
 import { KnittingMachine } from '../components/KnittingMachine';
 import { downloadCanvas } from '../lib/export';
@@ -57,7 +58,7 @@ export function ScarfStep() {
           />
         </div>
         {view === 'machine' ? (
-          <KnittingMachine chart={chart} options={o} />
+          <KnittingMachine chart={chart} options={o} onJump={() => setView('final')} />
         ) : (
         <>
         <div className="toolbar">
@@ -73,6 +74,7 @@ export function ScarfStep() {
       <div className="panel sidebar">
         <h3>{t('scarf.title')}</h3>
         <p className="hint">{t('scarf.hint')}</p>
+        <More title={t('scarf.texture')}>
         <Slider label={t('scarf.detail')} value={o.stitchPx} min={3} max={24} onChange={(v) => setScarfOptions({ stitchPx: v })} format={(v) => `${v}px`} />
         <Slider label={t('scarf.thickness')} value={o.thickness} min={0.7} max={1.3} step={0.05} onChange={(v) => setScarfOptions({ thickness: v })} format={(v) => v.toFixed(2)} />
         <Slider label={t('scarf.fuzz')} value={o.fuzz} min={0} max={1} step={0.05} onChange={(v) => setScarfOptions({ fuzz: v })} format={(v) => `${Math.round(v * 100)}%`} />
@@ -80,6 +82,7 @@ export function ScarfStep() {
         <Check label={t('scarf.drape')} checked={o.drape} onChange={(v) => setScarfOptions({ drape: v })} />
         <Check label={t('scarf.shadow')} checked={o.shadow} onChange={(v) => setScarfOptions({ shadow: v })} />
         <button className="btn small ghost" onClick={() => setScarfOptions({ seed: Math.floor(Math.random() * 1e6) })}>🎲 {t('scarf.reroll')}</button>
+        </More>
         <div className="divider" />
         <button
           className="btn primary"

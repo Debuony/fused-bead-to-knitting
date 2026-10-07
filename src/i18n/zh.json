@@ -14,7 +14,8 @@
     "back": "上一步",
     "next": "下一步",
     "reset": "重置",
-    "auto": "自动"
+    "auto": "自动",
+    "more": "更多设置"
   },
   "upload": {
     "title": "上传你的拼豆作品照片",
@@ -70,7 +71,8 @@
     "autoDone": "自动：{{w}} × {{h}} 颗，{{n}} 种颜色。",
     "autoDoneGuess": "自动：没看清豆子网格，猜测为 {{w}} × {{h}}，请检查一下。{{n}} 种颜色。",
     "removeEnclosed": "图案内部的背景也去掉",
-    "bgHint": "还有残留背景？下一步可以用 🪄 魔棒橡皮擦掉。"
+    "bgHint": "还有残留背景？下一步可以用 🪄 魔棒橡皮擦掉。",
+    "autoHint": "自动找出豆子网格、颜色数量和背景。"
   },
   "edit": {
     "colors": "颜色",
@@ -119,7 +121,9 @@
     "paintWith": "画笔颜色",
     "patternColors": "图纸中的颜色",
     "photoOverlay": "原照片",
-    "opacity": "透明度"
+    "opacity": "透明度",
+    "saveLoad": "保存 / 读取图纸",
+    "railTip": "小技巧：🪄 魔棒橡皮点一下就能擦掉一整块背景。"
   },
   "chart": {
     "gauge": "毛线与密度",
@@ -132,8 +136,8 @@
     "motifRows": "图案高度：{{rows}} 行",
     "scarfWidth": "围巾宽度",
     "length": "围巾长度",
-    "placement": "图案位置",
-    "ends": "两端各一个",
+    "placement": "图案放在哪里？",
+    "ends": "两端",
     "center": "居中",
     "repeat": "重复排列",
     "spacing": "间隔（行）",
@@ -163,7 +167,9 @@
     "tipIntarsia": "小贴士：颜色较多时，用嵌花（Intarsia）或织好后用平针刺绣（duplicate stitch）会比提花更容易。",
     "tipStranded": "小贴士：颜色较少时很适合用费尔岛提花，大色块也可以用嵌花。",
     "auto": "自动布局",
-    "autoHint": "根据默认设置自动选择搭配的主色线和经典布局。"
+    "autoHint": "根据默认设置自动选择搭配的主色线和经典布局。",
+    "sizeTitle": "尺寸",
+    "stsRowsShort": "针 × 行"
   },
   "scarf": {
     "title": "围巾预览",
@@ -184,7 +190,8 @@
     "new": "新建项目",
     "newConfirm": "要开始新项目吗？当前图纸将被清空。",
     "machineView": "针织机",
-    "finalView": "成品效果"
+    "finalView": "成品效果",
+    "texture": "质感与外观"
   },
   "settings": {
     "title": "设置",
@@ -251,16 +258,13 @@
     "none": "还没有自己的色卡。"
   },
   "machine": {
-    "auto": "自动",
-    "manual": "手动",
+    "auto": "自动织",
     "pause": "暂停",
-    "play": "继续",
     "speed": "速度",
     "restart": "重新织",
-    "skip": "直接织完",
-    "autoHint": "针织机正在自己织。空格键暂停。想帮忙？拖动机头、按 ← → / A D，或者滚动鼠标。",
-    "manualHint": "来回推动机头：用鼠标或手指拖动、按住 ← →（或 A / D），或者滚动滚轮。每来回一趟就织几行！",
     "done": "围巾织好啦！",
-    "rows": "第 {{n}} / {{total}} 行"
+    "rows": "第 {{n}} / {{total}} 行",
+    "jump": "直接看成品",
+    "hint": "帮针织机一把：按住空格，或者随便打字就会织 · ← → 手动推机头 · 也可以用鼠标拖。"
   }
 }

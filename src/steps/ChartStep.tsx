@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ActionRail, More } from '../components/ActionRail';
 import { Check, NumberField, Seg, Slider } from '../components/Field';
 import { autoMainYarn } from '../lib/auto';
 import { renderChart } from '../lib/chartRender';
@@ -67,67 +68,68 @@ export function ChartStep() {
     }, 'knitting-chart.pdf');
 
   return (
-    <div className="step-layout">
+    <div className="step-layout three">
       <div className="panel sidebar">
-        <button
-          className="btn primary"
-          onClick={() => setChartOptions({
-            gaugeSts: settings.gaugeSts, gaugeRows: settings.gaugeRows, lengthCm: settings.scarfLengthCm,
-            scarfWidthSts: settings.scarfWidthSts, motifWidthSts: 0, placement: 'ends', spacingRows: 8,
-            borderStyle: 'seed', borderSts: 4, bgHex: autoMainYarn(grid),
-          })}
-        >
-          ✨ {t('chart.auto')}
-        </button>
-        <p className="hint">{t('chart.autoHint')}</p>
-        <div className="divider" />
-        <h3>{t('chart.gauge')}</h3>
-        <label className="field">
-          {t('chart.yarnWeight')}
-          <select
-            value={Object.keys(YARN_WEIGHTS).find((k) => YARN_WEIGHTS[k].sts === o.gaugeSts && YARN_WEIGHTS[k].rows === o.gaugeRows) ?? 'custom'}
-            onChange={(e) => {
-              const g = YARN_WEIGHTS[e.target.value];
-              if (g) setChartOptions({ gaugeSts: g.sts, gaugeRows: g.rows });
-            }}
-          >
-            {Object.keys(YARN_WEIGHTS).map((k) => <option key={k} value={k}>{t(`yarn.${k}`)}</option>)}
-            <option value="custom">{t('yarn.custom')}</option>
-          </select>
-        </label>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <NumberField label={t('chart.gaugeSts')} value={o.gaugeSts} min={5} max={50} onChange={(v) => setChartOptions({ gaugeSts: v })} />
-          <NumberField label={t('chart.gaugeRows')} value={o.gaugeRows} min={5} max={60} onChange={(v) => setChartOptions({ gaugeRows: v })} />
+        <h3>{t('chart.placement')}</h3>
+        <div className="layout-cards">
+          {PLACEMENTS.map((p) => (
+            <button key={p} className={`layout-card ${o.placement === p ? 'on' : ''}`} onClick={() => setChartOptions({ placement: p })}>
+              <PlacementIcon placement={p} />
+              {t(`chart.${p}`)}
+            </button>
+          ))}
         </div>
-        <p className="hint">{t('chart.gaugeHint')}</p>
+        {o.placement !== 'center' && (
+          <Slider label={t('chart.spacing')} value={o.spacingRows} min={0} max={60} onChange={(v) => setChartOptions({ spacingRows: v })} />
+        )}
         <div className="divider" />
-        <h3>{t('chart.layout')}</h3>
+        <h3>{t('chart.sizeTitle')}</h3>
         <Slider label={t('chart.motifWidth')} value={mw} min={4} max={Math.max(120, grid.w * 3)} onChange={(v) => setChartOptions({ motifWidthSts: v === grid.w ? 0 : v })} format={(v) => `${v} ${t('chart.sts')}`} />
-        <p className="hint">{t('chart.motifRows', { rows: mh })}</p>
-        <NumberField
-          label={t('chart.scarfWidth')}
-          value={chart.w}
-          min={mw + 2 * o.borderSts}
-          max={400}
-          onChange={(v) => setChartOptions({ scarfWidthSts: v === autoScarfWidth(mw, o.borderSts) ? 0 : v })}
-          suffix={`${t('chart.sts')} · ${size.widthCm.toFixed(0)} cm`}
-        />
-        <NumberField label={t('chart.length')} value={o.lengthCm} min={20} max={400} onChange={(v) => setChartOptions({ lengthCm: v })} suffix="cm" />
-        <label className="field">
-          {t('chart.placement')}
-          <Seg<Placement>
-            value={o.placement}
-            onChange={(v) => setChartOptions({ placement: v })}
-            options={[
-              { value: 'ends', label: t('chart.ends') },
-              { value: 'center', label: t('chart.center') },
-              { value: 'repeat', label: t('chart.repeat') },
-            ]}
+        <div style={{ display: 'flex', gap: 10 }}>
+          <NumberField
+            label={t('chart.scarfWidth')}
+            value={chart.w}
+            min={mw + 2 * o.borderSts}
+            max={400}
+            onChange={(v) => setChartOptions({ scarfWidthSts: v === autoScarfWidth(mw, o.borderSts) ? 0 : v })}
           />
-        </label>
-        <Slider label={t('chart.spacing')} value={o.spacingRows} min={0} max={60} onChange={(v) => setChartOptions({ spacingRows: v })} />
-        <label className="field">
-          {t('chart.border')}
+          <NumberField label={`${t('chart.length')} (cm)`} value={o.lengthCm} min={20} max={400} onChange={(v) => setChartOptions({ lengthCm: v })} />
+        </div>
+        <p className="hint">≈ {size.widthCm.toFixed(0)} × {size.lengthCm.toFixed(0)} cm · {t('chart.motifRows', { rows: mh })}</p>
+        <div className="divider" />
+        <div className="field">
+          {t('chart.mainYarn')}
+          <div className="swatches">
+            {MAIN_YARNS.map((h) => (
+              <button key={h} className={`swatch ${o.bgHex === h ? 'on' : ''}`} style={{ background: h }} onClick={() => setChartOptions({ bgHex: h })} />
+            ))}
+            <label className="swatch custom" title={t('edit.customColor')}>
+              <input type="color" value={o.bgHex} onChange={(e) => setChartOptions({ bgHex: e.target.value })} />
+              ＋
+            </label>
+          </div>
+        </div>
+        <More title={t('chart.gauge')}>
+          <label className="field">
+            {t('chart.yarnWeight')}
+            <select
+              value={Object.keys(YARN_WEIGHTS).find((k) => YARN_WEIGHTS[k].sts === o.gaugeSts && YARN_WEIGHTS[k].rows === o.gaugeRows) ?? 'custom'}
+              onChange={(e) => {
+                const g = YARN_WEIGHTS[e.target.value];
+                if (g) setChartOptions({ gaugeSts: g.sts, gaugeRows: g.rows });
+              }}
+            >
+              {Object.keys(YARN_WEIGHTS).map((k) => <option key={k} value={k}>{t(`yarn.${k}`)}</option>)}
+              <option value="custom">{t('yarn.custom')}</option>
+            </select>
+          </label>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <NumberField label={t('chart.gaugeSts')} value={o.gaugeSts} min={5} max={50} onChange={(v) => setChartOptions({ gaugeSts: v })} />
+            <NumberField label={t('chart.gaugeRows')} value={o.gaugeRows} min={5} max={60} onChange={(v) => setChartOptions({ gaugeRows: v })} />
+          </div>
+          <p className="hint">{t('chart.gaugeHint')}</p>
+        </More>
+        <More title={t('chart.border')}>
           <Seg<BorderStyle>
             value={o.borderStyle}
             onChange={(v) => setChartOptions({ borderStyle: v })}
@@ -137,27 +139,8 @@ export function ChartStep() {
               { value: 'none', label: t('chart.none') },
             ]}
           />
-        </label>
-        <Slider label={t('chart.borderWidth')} value={o.borderSts} min={0} max={10} onChange={(v) => setChartOptions({ borderSts: v })} />
-        <div className="field">
-          {t('chart.mainYarn')}
-          <div className="swatches">
-            {MAIN_YARNS.map((h) => (
-              <button key={h} className={`swatch ${o.bgHex === h ? 'on' : ''}`} style={{ background: h }} onClick={() => setChartOptions({ bgHex: h })} />
-            ))}
-            <input type="color" value={o.bgHex} onChange={(e) => setChartOptions({ bgHex: e.target.value })} />
-          </div>
-        </div>
-        <button
-          className="btn small ghost"
-          onClick={() => setChartOptions({ gaugeSts: settings.gaugeSts, gaugeRows: settings.gaugeRows, lengthCm: settings.scarfLengthCm, scarfWidthSts: settings.scarfWidthSts, motifWidthSts: 0 })}
-        >
-          ↺ {t('chart.useDefaults')}
-        </button>
-        <div className="footer-nav">
-          <button className="btn" onClick={() => goTo(2)}>← {t('common.back')}</button>
-          <button className="btn primary" onClick={() => goTo(4)}>{t('chart.toScarf')} →</button>
-        </div>
+          <Slider label={t('chart.borderWidth')} value={o.borderSts} min={0} max={10} onChange={(v) => setChartOptions({ borderSts: v })} />
+        </More>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
@@ -178,13 +161,7 @@ export function ChartStep() {
         </div>
 
         <div className="panel">
-          <div className="stats" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', marginBottom: 12 }}>
-            <div className="stat"><b>{chart.w} × {chart.h}</b><span>{t('chart.stsRows')}</span></div>
-            <div className="stat"><b>{size.widthCm.toFixed(0)} × {size.lengthCm.toFixed(0)} cm</b><span>{t('chart.finished')}</span></div>
-            <div className="stat"><b>{colorCount}</b><span>{t('pixelize.colors')}</span></div>
-            <div className="stat"><b>≈ {Math.ceil(totalM)} m</b><span>{t('chart.totalYarn')}</span></div>
-          </div>
-          <h3>{t('chart.legend')}</h3>
+          <h3>{t('chart.legend')} · {chart.w} × {chart.h} {t('chart.stsRowsShort')}</h3>
           <table className="legend">
             <thead>
               <tr><th></th><th>{t('chart.symbol')}</th><th>{t('chart.yarnName')}</th><th>{t('chart.sts')}</th><th>{t('chart.yarnLen')}</th></tr>
@@ -208,6 +185,35 @@ export function ChartStep() {
           <p className="hint" style={{ marginTop: 10 }}>{colorCount > 4 ? t('chart.tipIntarsia') : t('chart.tipStranded')}</p>
         </div>
       </div>
+      <ActionRail
+        autoLabel={t('chart.auto')}
+        autoHint={t('chart.autoHint')}
+        onAuto={() => setChartOptions({
+          gaugeSts: settings.gaugeSts, gaugeRows: settings.gaugeRows, lengthCm: settings.scarfLengthCm,
+          scarfWidthSts: settings.scarfWidthSts, motifWidthSts: 0, placement: 'ends', spacingRows: 8,
+          borderStyle: 'seed', borderSts: 4, bgHex: autoMainYarn(grid),
+        })}
+        back={() => goTo(2)}
+        next={{ label: t('chart.toScarf'), onClick: () => goTo(4) }}
+      >
+        <div className="stats">
+          <div className="stat"><b>{size.widthCm.toFixed(0)}×{size.lengthCm.toFixed(0)}</b><span>cm</span></div>
+          <div className="stat"><b>≈ {Math.ceil(totalM)} m</b><span>{t('chart.totalYarn')}</span></div>
+        </div>
+      </ActionRail>
     </div>
+  );
+}
+
+const PLACEMENTS: Placement[] = ['ends', 'center', 'repeat'];
+
+/** Tiny scarf diagram showing where motifs go. */
+function PlacementIcon({ placement }: { placement: Placement }) {
+  const ys = placement === 'ends' ? [6, 46] : placement === 'center' ? [26] : [8, 26, 44];
+  return (
+    <svg width="26" height="64" viewBox="0 0 26 64" aria-hidden>
+      <rect x="1" y="1" width="24" height="62" rx="4" fill="var(--chip)" stroke="var(--line)" />
+      {ys.map((y) => <rect key={y} x="6" y={y} width="14" height="12" rx="2" fill="var(--accent)" />)}
+    </svg>
   );
 }
