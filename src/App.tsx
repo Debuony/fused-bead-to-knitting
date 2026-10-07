@@ -8,6 +8,7 @@ import { PixelizeStep } from './steps/PixelizeStep';
 import { ScarfStep } from './steps/ScarfStep';
 import { UploadStep } from './steps/UploadStep';
 import { useProject } from './store/projectStore';
+import logo from './assets/logo.svg';
 
 const STEP_COMPONENTS = [UploadStep, PixelizeStep, EditStep, ChartStep, ScarfStep];
 
@@ -22,7 +23,7 @@ export default function App() {
     <div className="app">
       <header className="header">
         <div className="brand">
-          <img src="./favicon.svg" width={34} height={34} alt="" />
+          <img src={logo} width={34} height={34} alt="" />
           <div>
             {t('app.title')}
             <small>{t('app.subtitle')}</small>

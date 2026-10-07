@@ -1,8 +1,11 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { viteSingleFile } from 'vite-plugin-singlefile';
 
-export default defineConfig({
-  plugins: [react()],
+// `npm run build:single` produces one self-contained HTML file that opens by double-click.
+export default defineConfig(({ mode }) => ({
+  plugins: mode === 'single' ? [react(), viteSingleFile()] : [react()],
   base: './',
+  build: mode === 'single' ? { outDir: 'dist-single' } : {},
   test: { environment: 'node' },
-});
+}));

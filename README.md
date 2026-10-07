@@ -36,8 +36,13 @@ Requires Node.js 18+.
 npm install
 npm run dev      # http://localhost:5173
 npm test         # unit tests (colour, pixelize, chart)
-npm run build    # static site in dist/ (deploy anywhere, e.g. GitHub Pages / Vercel)
+npm run build    # static site in dist/
+npm run build:single  # one self-contained HTML in dist-single/ (open by double-click, good for sharing)
 ```
+
+Pushing to `master` deploys the site to GitHub Pages via `.github/workflows/deploy.yml`.
+
+A Chinese user tutorial (source + screenshots) lives in `docs/tutorial/`.
 
 Everything runs in the browser, with no server and no uploads.
 

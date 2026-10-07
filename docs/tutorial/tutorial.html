@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>拼豆变围巾 · 使用教程</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm 16mm 15mm; }
+  :root { --accent: #e26d5c; --ink: #2a2522; --soft: #6b625c; --bg: #fbf6f0; --line: #eadfd3; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif; color: var(--ink); font-size: 10.5pt; line-height: 1.65; }
+  h1 { font-size: 30pt; margin: 0; letter-spacing: 0.02em; }
+  h2 { font-size: 17pt; margin: 0 0 6px; display: flex; align-items: center; gap: 10px; }
+  h2 .n { background: var(--accent); color: #fff; width: 34px; height: 34px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 14pt; flex-shrink: 0; }
+  h3 { font-size: 12pt; margin: 14px 0 4px; }
+  p { margin: 4px 0 8px; }
+  .page { page-break-after: always; }
+  .page:last-child { page-break-after: auto; }
+  .lead { color: var(--soft); font-size: 11.5pt; }
+  ol, ul { margin: 4px 0 8px; padding-left: 22px; }
+  li { margin: 3px 0; }
+  .shot { width: 100%; border-radius: 8px; border: 1px solid var(--line); box-shadow: 0 3px 12px rgba(80, 50, 30, 0.10); margin: 8px 0 4px; display: block; }
+  .shot.half { width: 100%; }
+  .cap { color: var(--soft); font-size: 9pt; text-align: center; margin-bottom: 8px; }
+  .tip { background: #fff4e5; border-left: 4px solid #e0a43a; padding: 8px 12px; border-radius: 6px; margin: 10px 0; }
+  .note { background: #eef5ff; border-left: 4px solid #3f7fc4; padding: 8px 12px; border-radius: 6px; margin: 10px 0; }
+  .ok { background: #ecf7ef; border-left: 4px solid #4f9d69; padding: 8px 12px; border-radius: 6px; margin: 10px 0; }
+  .btn { display: inline-block; background: var(--accent); color: #fff; border-radius: 6px; padding: 0 7px; font-weight: 700; font-size: 9.5pt; white-space: nowrap; }
+  .key { display: inline-block; border: 1px solid #c9bdb1; border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; font-size: 9pt; background: #fff; white-space: nowrap; }
+  b { color: #000; }
+  .cover { height: 255mm; display: flex; flex-direction: column; justify-content: center; background: var(--bg); border-radius: 14px; padding: 40px 36px; position: relative; overflow: hidden; }
+  .cover .dots { position: absolute; right: -40px; top: -40px; width: 260px; height: 260px; opacity: 0.9;
+    background: radial-gradient(circle, #fbf6f0 22%, transparent 24%), radial-gradient(circle, #f2b8b5 46%, transparent 48%); background-size: 32px 32px; }
+  .flow { display: flex; gap: 6px; flex-wrap: wrap; margin: 26px 0 18px; align-items: center; }
+  .flow span.s { background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-weight: 700; font-size: 10pt; }
+  .flow span.a { color: var(--accent); font-weight: 800; }
+  .files { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 18px; }
+  .file { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .file b { display: block; font-size: 11pt; }
+  .file span { color: var(--soft); font-size: 9.5pt; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+  table { width: 100%; border-collapse: collapse; font-size: 9.8pt; margin: 6px 0 10px; }
+  td, th { border-bottom: 1px solid var(--line); padding: 5px 6px; text-align: left; vertical-align: top; }
+  th { background: var(--bg); }
+  .check { list-style: none; padding-left: 0; }
+  .check li::before { content: '☐  '; font-size: 12pt; }
+  .footer { color: var(--soft); font-size: 9pt; margin-top: 20px; }
+</style>
+</head>
+<body>
+
+<!-- 封面 -->
+<section class="page">
+  <div class="cover">
+    <div class="dots"></div>
+    <p class="lead" style="margin:0 0 6px">使用教程 · 测试版</p>
+    <h1>🧶 拼豆变围巾</h1>
+    <p style="font-size:13pt; margin-top:12px">把你做好的拼豆作品，变成一条可以织出来的围巾。</p>
+    <div class="flow">
+      <span class="s">📷 拍照上传</span><span class="a">→</span>
+      <span class="s">🟥 变成电子图纸</span><span class="a">→</span>
+      <span class="s">✏️ 修改图纸</span><span class="a">→</span>
+      <span class="s">📋 生成花卡</span><span class="a">→</span>
+      <span class="s">🧣 看围巾效果</span>
+    </div>
+    <p>整个过程大约 <b>5 分钟</b>，不需要任何电脑基础。照片只在你自己的电脑里处理，<b>不会上传到网上</b>。</p>
+    <div class="files">
+      <div class="file"><b>📄 拼豆变围巾.html</b><span>网站本体。双击打开就能用。</span></div>
+      <div class="file"><b>🍓 示例拼豆-草莓.jpg</b><span>一张示例照片。手边没有拼豆照片时，可以先用它试一试。</span></div>
+    </div>
+    <p class="footer">本教程的最后一页是「测试反馈清单」，用完后请帮忙填一下 🙏</p>
+  </div>
+</section>
+
+<!-- 打开 -->
+<section class="page">
+  <h2><span class="n">0</span>打开网站</h2>
+  <ol>
+    <li>把收到的 <b>拼豆变围巾.html</b> 保存到电脑上（比如桌面）。</li>
+    <li><b>双击</b>它，它会在浏览器里打开。推荐用 <b>Chrome</b>、<b>Safari</b> 或 <b>Edge</b>。
+      <br>如果双击后打开的不是浏览器：右键文件 →「打开方式」→ 选择 Chrome 或 Safari。</li>
+    <li>右上角可以切换 <span class="key">中文</span> / <span class="key">EN</span>。</li>
+  </ol>
+  <img class="shot" src="shots/01-home.jpg">
+  <p class="cap">打开后看到的首页。顶部是 5 个步骤，做完一步会打上 ✓。</p>
+  <div class="note">💡 <b>建议用电脑打开</b>，屏幕大一点，编辑图纸更方便。不需要联网，也不用注册登录。</div>
+
+  <h3>📸 拍照小贴士</h3>
+  <ul>
+    <li><b>从正上方拍</b>，手机尽量和作品平行，不要斜着拍。</li>
+    <li>光线<b>均匀</b>，避免强烈的反光和阴影（白天靠窗最好）。</li>
+    <li>整个作品都要在画面里，最好放在<b>颜色单一的背景</b>上（例如白纸或拼豆板）。</li>
+    <li>iPhone 照片如果是 <b>HEIC</b> 格式，网站可能读不了。可以先截个屏，或者在相册里「导出为 JPG」。</li>
+  </ul>
+</section>
+
+<!-- 第一步 -->
+<section class="page">
+  <h2><span class="n">1</span>上传照片 · 摆正裁剪</h2>
+  <ol>
+    <li>点击 <span class="btn">选择照片</span>，或者直接把照片<b>拖进</b>虚线框里。</li>
+    <li>照片上会出现一个<b>橙色的裁剪框</b>。拖动它四个角上的<b>小圆点</b>，让框<b>刚好贴住拼豆的边缘</b>，把桌子、多余的空板都裁掉。</li>
+    <li>如果拼豆的行是歪的，拖动左边的 <b>「旋转」</b>滑块把它摆正。<span class="key">⟲ 90°</span> <span class="key">⟳ 90°</span> 可以整体转向。</li>
+    <li>点 <span class="btn">下一步 →</span>。</li>
+  </ol>
+  <img class="shot" src="shots/02-crop.jpg">
+  <p class="cap">裁剪框贴住了草莓的边缘，外面的部分会变暗，表示被裁掉。</p>
+  <div class="tip">⭐ <b>裁剪得越准，下一步的效果越好。</b>框里最好正好是「一整颗一整颗的豆子」，不要切到半颗。</div>
+</section>
+
+<!-- 第二步 -->
+<section class="page">
+  <h2><span class="n">2</span>像素化 · 变成电子图纸</h2>
+  <p>网站会把照片切成一个个小格子，每一格对应一颗豆子，并找到最接近的拼豆颜色。</p>
+  <ol>
+    <li>先点 <span class="btn">🔍 自动识别</span>，它会自己数出横竖各有几颗豆子。<br>
+      如果数得不对，就在 <b>宽（颗）</b> 和 <b>高（颗）</b> 里<b>手动填</b>你作品真实的豆子数。</li>
+    <li>对比右边的<b>电子图纸</b>和左边的照片，看看是否一致。</li>
+    <li>满意后点 <span class="btn">使用这张图纸 →</span>。</li>
+  </ol>
+  <img class="shot" src="shots/03-pixelize.jpg">
+  <p class="cap">左：原照片　右：生成的电子图纸。下方显示格子大小、颜色数和豆子总数。</p>
+  <h3>其他选项（可以不动）</h3>
+  <table>
+    <tr><th style="width:28%">选项</th><th>作用</th></tr>
+    <tr><td>拼豆色卡</td><td>选择你用的拼豆品牌（MARD / Perler / Hama），或者「从照片取色」。</td></tr>
+    <tr><td>最多颜色数</td><td>颜色太多、出现杂色时调小一点。</td></tr>
+    <tr><td>去除背景</td><td>勾选后会把作品周围的空板或背景去掉，只留下作品本身。</td></tr>
+    <tr><td>每颗豆取样范围</td><td>豆子中间的孔影响了颜色时，可以调小一点。</td></tr>
+  </table>
+</section>
+
+<!-- 第三步 -->
+<section class="page">
+  <h2><span class="n">3</span>编辑图纸</h2>
+  <p>这里可以像画画一样修改图纸，比如修正识别错的颜色。<b>不需要修改的话，直接点</b> <span class="btn">确认图纸 →</span>。</p>
+  <img class="shot" src="shots/04-edit.jpg">
+  <p class="cap">左边：用到的颜色（数字 = 用了几颗）和画布工具　右边：图纸</p>
+  <div class="grid2">
+    <div>
+      <h3>上方工具栏</h3>
+      <table>
+        <tr><td style="width:30px">✏️</td><td><b>画笔</b>：点一下或拖动来放豆子</td></tr>
+        <tr><td>🧽</td><td><b>橡皮</b>：去掉豆子</td></tr>
+        <tr><td>🪣</td><td><b>填充</b>：把一整块相连的同色区域换色</td></tr>
+        <tr><td>💧</td><td><b>吸管</b>：点一颗豆子，取它的颜色</td></tr>
+        <tr><td>🔁</td><td><b>替换颜色</b>：把整张图里这个颜色全部换掉</td></tr>
+        <tr><td>↶ ↷</td><td><b>撤销 / 重做</b>，画错了别担心</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3>怎么换颜色？</h3>
+      <ol>
+        <li>在<b>左边颜色列表</b>里点一下想用的颜色；</li>
+        <li>没有这个颜色？点 <span class="key">＋ 添加颜色</span> 从色卡里选；</li>
+        <li>然后用画笔在图纸上点。</li>
+      </ol>
+      <h3>其他</h3>
+      <ul>
+        <li><b>缩放</b>滑块可以把图纸放大，方便点小格子。</li>
+        <li><b>画布</b>：上/下/左/右 <span class="key">+1</span> <span class="key">−1</span> 增减一行或一列；也可以翻转、旋转。</li>
+        <li><span class="key">⬇ PNG</span> 可以下载这张拼豆图纸。</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 第四步 -->
+<section class="page">
+  <h2><span class="n">4</span>花卡 · 针织图解</h2>
+  <p>这一步把拼豆图纸变成<b>毛线编织用的花卡</b>：每个小格 = 一针，每种颜色有自己的<b>符号</b>。</p>
+  <img class="shot" src="shots/05-chart.jpg">
+  <p class="cap">左边调整围巾参数，右边实时显示花卡。</p>
+  <h3>可以调整的地方</h3>
+  <table>
+    <tr><th style="width:26%">设置</th><th>说明</th></tr>
+    <tr><td>毛线粗细 / 密度</td><td>选你打算用的毛线粗细。如果你织过小样，可以填自己量到的「每 10 cm 几针、几行」。</td></tr>
+    <tr><td>图案宽度</td><td>图案织多宽（多少针），图案会自动按比例变大或变小。</td></tr>
+    <tr><td>围巾宽度 / 长度</td><td>整条围巾的尺寸，右边会显示换算成的厘米数。</td></tr>
+    <tr><td>图案位置</td><td><b>两端各一个</b>（围上后两头都能看到）、<b>居中</b>或<b>重复排列</b>。</td></tr>
+    <tr><td>边缘</td><td>桂花针 / 起伏针可以防止围巾边缘卷起来。</td></tr>
+    <tr><td>主色线</td><td>围巾底色。</td></tr>
+  </table>
+  <div class="note">📖 <b>怎么看花卡：</b>第 1 行在<b>最下面</b>，从下往上织。奇数行（正面）<b>从右往左</b>读，偶数行（反面）<b>从左往右</b>读。每 10 格有一条粗线，方便数数。</div>
+</section>
+
+<section class="page">
+  <h2><span class="n">4</span>花卡 · 颜色图例和下载</h2>
+  <p>往下滚动，可以看到<b>颜色图例</b>：每种颜色的符号、需要织多少针、大约要用多少米毛线。</p>
+  <img class="shot" src="shots/06-legend.jpg">
+  <ul>
+    <li>点<b>颜色方块</b>可以换成你实际买到的毛线颜色；<b>毛线名称</b>可以直接改，比如写上品牌和色号。</li>
+    <li>顶部的 <span class="key">图案部分</span> / <span class="key">整条围巾</span> 可以切换查看范围。</li>
+    <li>点 <span class="btn">⬇ PDF</span> 下载可打印的花卡（第 1 页是图例），或者 <span class="key">⬇ PNG</span> 下载图片。</li>
+    <li>想打印黑白版？取消勾选 <b>「彩色」</b>，只保留符号。</li>
+  </ul>
+  <div class="tip">⭐ 用线量是<b>粗略估算</b>，买毛线时建议每种颜色多买一点。</div>
+</section>
+
+<!-- 第五步 -->
+<section class="page">
+  <h2><span class="n">5</span>围巾效果</h2>
+  <p>点 <span class="btn">看看围巾效果 →</span>，就能看到织好后的围巾模拟图 🎉</p>
+  <img class="shot" src="shots/07-scarf.jpg">
+  <p class="cap">完整视图：两端各有一颗草莓，带流苏和垂坠感。</p>
+  <img class="shot" src="shots/08-closeup.jpg">
+  <p class="cap">点「近看」可以看到一针一针的毛线质感。</p>
+  <ul>
+    <li><b>线圈大小 / 毛线粗细 / 毛绒感</b>：调整质感；<b>流苏、垂坠褶皱、阴影</b>可以开关。</li>
+    <li><span class="key">横向</span> / <span class="key">竖向</span> 改变围巾的摆放方向；<span class="key">🎲 换个纹理</span> 随机换一种纹理。</li>
+    <li>点 <span class="btn">⬇ 下载图片</span> 保存效果图，可以发给朋友看 ✨</li>
+    <li>想做下一个作品？点 <span class="key">✨ 新建项目</span>。</li>
+  </ul>
+</section>
+
+<!-- 设置 + FAQ -->
+<section class="page">
+  <h2><span class="n">⚙️</span>设置 · 换个好看的背景</h2>
+  <div class="grid2">
+    <div>
+      <p>点右上角的 <span class="key">⚙️ 设置</span>：</p>
+      <ul>
+        <li><b>背景</b>：奶油、蜜桃、格纹、波点……也可以选自己喜欢的颜色，或者<b>上传自己的图片</b>当背景。</li>
+        <li><b>外观</b>：浅色 / 深色模式、主题色、文字大小。</li>
+        <li><b>默认参数</b>：常用的拼豆品牌、毛线粗细等。</li>
+      </ul>
+      <p>设置会自动保存，下次打开还在。</p>
+    </div>
+    <img class="shot" src="shots/09-settings-crop.jpg" style="margin-top:0">
+  </div>
+
+  <h3>❓ 常见问题</h3>
+  <table>
+    <tr><th style="width:36%">遇到的情况</th><th>怎么办</th></tr>
+    <tr><td>上传后提示「无法读取」</td><td>照片可能是 HEIC 格式。截个屏，或者转成 JPG 再上传。</td></tr>
+    <tr><td>「自动识别」数得不对</td><td>先把裁剪框调得更贴合作品边缘，再试一次；或者直接手动填豆子数。</td></tr>
+    <tr><td>图纸颜色和实物不一样</td><td>换一个拼豆色卡试试；或者在第 3 步用画笔、替换颜色手动修正。</td></tr>
+    <tr><td>图纸上有很多杂色小点</td><td>把「最多颜色数」调小。</td></tr>
+    <tr><td>想回到前面某一步</td><td>直接点页面顶部的步骤名称，或者点「上一步」。</td></tr>
+    <tr><td>关掉网页后东西还在吗？</td><td>图纸和设置会保留；但原照片不会保存，需要的话重新上传。</td></tr>
+    <tr><td>网页卡住了</td><td>围巾效果图需要几秒钟绘制，稍等一下；实在不行就刷新页面。</td></tr>
+  </table>
+</section>
+
+<!-- 反馈 -->
+<section class="page">
+  <h2><span class="n">💌</span>测试反馈清单</h2>
+  <p class="lead">谢谢你帮忙测试！用完之后，请回答下面的问题（直接在微信里回复就可以）。遇到问题时，<b>截个屏</b>会特别有帮助。</p>
+  <h3>每一步能顺利完成吗？</h3>
+  <ul class="check">
+    <li>0. 能打开网站</li>
+    <li>1. 能上传照片、调整裁剪框</li>
+    <li>2. 自动识别的豆子数是对的 / 电子图纸和照片一致</li>
+    <li>3. 能修改图纸（画笔、换颜色、撤销）</li>
+    <li>4. 看得懂花卡，能下载 PDF</li>
+    <li>5. 能看到围巾效果图，并下载图片</li>
+    <li>⚙️ 能换背景、切换中英文</li>
+  </ul>
+  <h3>想听听你的感受</h3>
+  <ol>
+    <li>哪一步让你<b>不知道该点哪里</b>，或者<b>看不懂</b>？</li>
+    <li>有没有出现<b>报错、卡住、显示不对</b>的地方？（在哪一步？用的是什么浏览器？）</li>
+    <li>用你自己的拼豆照片试了吗？识别的效果怎么样？</li>
+    <li>围巾效果图看起来像真的围巾吗？</li>
+    <li>你最希望增加什么功能？</li>
+    <li>满分 10 分，你愿意推荐给其他做拼豆的朋友吗？</li>
+  </ol>
+  <div class="ok">🧶 再次感谢！你的每一条反馈都会让这个小网站变得更好用。</div>
+</section>
+
+</body>
+</html>
