@@ -4,6 +4,28 @@ import type { Grid } from '../lib/grid';
 import { FULL_CROP, type CropRect } from '../lib/imageUtils';
 import { DEFAULT_CHART_OPTIONS, type ChartOptions } from '../lib/knitChart';
 import { DEFAULT_SCARF_OPTIONS, type ScarfRenderOptions } from '../lib/scarfRender';
+import { useSettings } from './settingsStore';
+
+export interface PixelOptions {
+  gridW: number;
+  gridH: number;
+  lock: boolean;
+  paletteId: string;
+  maxColors: number;
+  removeBg: boolean;
+  /** 0 = automatic */
+  bgTol: number;
+  removeEnclosed: boolean;
+  sample: number;
+}
+
+function defaultPixelOptions(): PixelOptions {
+  const s = useSettings.getState();
+  return {
+    gridW: s.gridW, gridH: s.gridH, lock: false, paletteId: s.paletteId, maxColors: s.maxColors,
+    removeBg: true, bgTol: 0, removeEnclosed: false, sample: 0.6,
+  };
+}
 
 export type Step = 0 | 1 | 2 | 3 | 4;
 
@@ -16,6 +38,7 @@ interface ProjectState {
   image: string | null;
   rotation: number;
   crop: CropRect;
+  pixelOptions: PixelOptions;
   grid: Grid | null;
   past: Grid[];
   future: Grid[];
@@ -25,6 +48,7 @@ interface ProjectState {
   goTo: (s: Step) => void;
   setImage: (dataUrl: string | null) => void;
   setTransform: (patch: { rotation?: number; crop?: CropRect }) => void;
+  setPixelOptions: (patch: Partial<PixelOptions>) => void;
   /** Replace the grid without recording history (e.g. live pixelize preview). */
   setGrid: (g: Grid | null) => void;
   /** Record the current grid in history, then replace it. */
@@ -46,6 +70,7 @@ export const useProject = create<ProjectState>()(
       image: null,
       rotation: 0,
       crop: FULL_CROP,
+      pixelOptions: defaultPixelOptions(),
       grid: null,
       past: [],
       future: [],
@@ -53,8 +78,9 @@ export const useProject = create<ProjectState>()(
       scarfOptions: DEFAULT_SCARF_OPTIONS,
 
       goTo: (s) => set((st) => ({ step: s, maxStep: (Math.max(st.maxStep, s) as Step) })),
-      setImage: (image) => set({ image, rotation: 0, crop: FULL_CROP }),
+      setImage: (image) => set({ image, rotation: 0, crop: FULL_CROP, pixelOptions: defaultPixelOptions() }),
       setTransform: (patch) => set(patch),
+      setPixelOptions: (patch) => set((st) => ({ pixelOptions: { ...st.pixelOptions, ...patch } })),
       setGrid: (grid) => set({ grid }),
       commitGrid: (g) =>
         set((st) => ({

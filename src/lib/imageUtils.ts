@@ -63,3 +63,16 @@ export function transformImage(img: HTMLImageElement, rotation: number, crop: Cr
 export function canvasImageData(c: HTMLCanvasElement): ImageData {
   return c.getContext('2d')!.getImageData(0, 0, c.width, c.height);
 }
+
+/** Rotated + cropped photo, downscaled so processing stays fast. */
+export async function workingImage(src: string, rotation: number, crop: CropRect, maxSide = 900): Promise<HTMLCanvasElement> {
+  const img = await loadImage(src);
+  const c = transformImage(img, rotation, crop);
+  const scale = Math.min(1, maxSide / Math.max(c.width, c.height));
+  if (scale === 1) return c;
+  const s = document.createElement('canvas');
+  s.width = Math.max(1, Math.round(c.width * scale));
+  s.height = Math.max(1, Math.round(c.height * scale));
+  s.getContext('2d')!.drawImage(c, 0, 0, s.width, s.height);
+  return s;
+}

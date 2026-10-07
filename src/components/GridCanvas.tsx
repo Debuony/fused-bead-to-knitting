@@ -12,6 +12,9 @@ interface Props {
   /** Pointer callback in grid coordinates. */
   onCell?: (x: number, y: number, phase: 'down' | 'move' | 'up') => void;
   cursor?: string;
+  /** Optional reference image (e.g. the original photo) drawn over the grid. */
+  overlay?: CanvasImageSource | null;
+  overlayOpacity?: number;
 }
 
 /** Draws a bead grid either as fused beads (rings) or flat squares. */
@@ -77,7 +80,7 @@ export function drawGrid(ctx: CanvasRenderingContext2D, grid: Grid, cell: number
   }
 }
 
-export function GridCanvas({ grid, cell, beadStyle = 'bead', showGrid = true, onCell, cursor }: Props) {
+export function GridCanvas({ grid, cell, beadStyle = 'bead', showGrid = true, onCell, cursor, overlay, overlayOpacity = 0.4 }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
   const last = useRef<string>('');
@@ -93,7 +96,12 @@ export function GridCanvas({ grid, cell, beadStyle = 'bead', showGrid = true, on
     const ctx = c.getContext('2d')!;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     drawGrid(ctx, grid, cell, beadStyle, showGrid);
-  }, [grid, cell, beadStyle, showGrid]);
+    if (overlay) {
+      ctx.globalAlpha = overlayOpacity;
+      ctx.drawImage(overlay, 0, 0, grid.w * cell, grid.h * cell);
+      ctx.globalAlpha = 1;
+    }
+  }, [grid, cell, beadStyle, showGrid, overlay, overlayOpacity]);
 
   const toCell = (e: React.PointerEvent) => {
     const rect = ref.current!.getBoundingClientRect();

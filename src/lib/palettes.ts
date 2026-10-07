@@ -51,15 +51,38 @@ const MARD = make('M', [
   ['G2 灰 Grey', '#9a9a9a'], ['G3 深灰 Dark Grey', '#5a5a5a'], ['G4 黑 Black', '#1e1e1e'], ['G5 奶咖 Latte', '#cbb497'],
 ]);
 
+const ARTKAL = make('S', [
+  ['White', '#fdfdfd'], ['Ivory', '#f4eccd'], ['Lemon', '#fbf27b'], ['Yellow', '#f8d322'], ['Gold', '#e9a91c'],
+  ['Tangerine', '#f68b2c'], ['Orange', '#ec6626'], ['Coral', '#f47a6e'], ['Red', '#d8243b'], ['Crimson', '#a3192f'],
+  ['Baby Pink', '#fbd0dc'], ['Pink', '#f59bbd'], ['Hot Pink', '#ea4f93'], ['Magenta', '#c4307e'], ['Lilac', '#d6bfe8'],
+  ['Lavender', '#a990d4'], ['Purple', '#7444a6'], ['Grape', '#4f2c7a'], ['Ice Blue', '#cfe9f7'], ['Sky Blue', '#8ccaf0'],
+  ['Azure', '#3a9ee0'], ['Blue', '#2266be'], ['Navy', '#1c2d64'], ['Aqua', '#8fe0d8'], ['Teal', '#16979a'],
+  ['Mint', '#bdeccb'], ['Lime', '#a6d84a'], ['Green', '#2fa24f'], ['Forest', '#1b5e37'], ['Olive', '#7d8a37'],
+  ['Cream', '#f6e2c3'], ['Peach', '#f9c4a0'], ['Tan', '#d2a273'], ['Caramel', '#b77a43'], ['Brown', '#7a4a2a'],
+  ['Dark Brown', '#4b2c1c'], ['Light Grey', '#d8d8d8'], ['Grey', '#9d9d9d'], ['Charcoal', '#545454'], ['Black', '#1b1b1b'],
+]);
+
+const PYSSLA = make('I', [
+  ['White', '#f4f4f2'], ['Yellow', '#f6d32a'], ['Orange', '#ef7f22'], ['Red', '#d1283a'], ['Pink', '#f39cbf'],
+  ['Purple', '#7a4c9f'], ['Light Blue', '#62b0e3'], ['Blue', '#2a5cb2'], ['Green', '#3a9b4c'], ['Light Green', '#9fd263'],
+  ['Brown', '#6c432a'], ['Beige', '#e1c39d'], ['Grey', '#a0a0a0'], ['Black', '#262626'],
+]);
+
 export const PALETTES: Palette[] = [
   { id: 'mard', label: 'MARD', colors: MARD },
   { id: 'perler', label: 'Perler', colors: PERLER },
   { id: 'hama', label: 'Hama', colors: HAMA },
+  { id: 'artkal', label: 'Artkal', colors: ARTKAL },
+  { id: 'pyssla', label: 'IKEA Pyssla', colors: PYSSLA },
 ];
 
 /** Special id meaning "derive colours from the photo itself" (k-means). */
 export const AUTO_PALETTE_ID = 'auto';
 
-export function getPalette(id: string): Palette | undefined {
-  return PALETTES.find((p) => p.id === id);
+/** Ids of user-made palettes start with this prefix. */
+export const CUSTOM_PREFIX = 'custom-';
+
+/** Looks up a built-in or user-made palette. */
+export function getPalette(id: string, custom: Palette[] = []): Palette | undefined {
+  return PALETTES.find((p) => p.id === id) ?? custom.find((p) => p.id === id);
 }

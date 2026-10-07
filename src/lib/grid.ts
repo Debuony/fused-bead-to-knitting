@@ -126,3 +126,26 @@ export function cropToContent(g: Grid): Grid {
     for (let x = 0; x < w; x++) cells[y * w + x] = g.cells[(y + minY) * g.w + x + minX];
   return { ...g, w, h, cells };
 }
+
+/** Fill the rectangle spanned by two corners. */
+export function fillRect(g: Grid, x0: number, y0: number, x1: number, y1: number, value: number): Grid {
+  const cells = g.cells.slice();
+  for (let y = Math.min(y0, y1); y <= Math.max(y0, y1); y++)
+    for (let x = Math.min(x0, x1); x <= Math.max(x0, x1); x++) cells[y * g.w + x] = value;
+  return { ...g, cells };
+}
+
+/** Paint a square brush of `size` cells centred on (x, y). */
+export function paintBrush(g: Grid, x: number, y: number, size: number, value: number): Grid {
+  const r0 = -Math.floor((size - 1) / 2);
+  let changed = false;
+  const cells = g.cells.slice();
+  for (let dy = r0; dy < r0 + size; dy++)
+    for (let dx = r0; dx < r0 + size; dx++) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= g.w || ny >= g.h) continue;
+      if (cells[ny * g.w + nx] !== value) { cells[ny * g.w + nx] = value; changed = true; }
+    }
+  return changed ? { ...g, cells } : g;
+}

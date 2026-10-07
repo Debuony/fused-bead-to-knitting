@@ -1,7 +1,21 @@
 {
-  "app": { "title": "Bead to Scarf", "subtitle": "Turn your fused-bead art into a knitted scarf" },
-  "steps": { "upload": "Upload", "pixelize": "Pixelize", "edit": "Edit pattern", "chart": "Knitting chart", "scarf": "Scarf" },
-  "common": { "back": "Back", "next": "Next", "reset": "Reset" },
+  "app": {
+    "title": "Bead to Scarf",
+    "subtitle": "Turn your fused-bead art into a knitted scarf"
+  },
+  "steps": {
+    "upload": "Upload",
+    "pixelize": "Pixelize",
+    "edit": "Edit pattern",
+    "chart": "Knitting chart",
+    "scarf": "Scarf"
+  },
+  "common": {
+    "back": "Back",
+    "next": "Next",
+    "reset": "Reset",
+    "auto": "Auto"
+  },
   "upload": {
     "title": "Upload a photo of your bead art",
     "hint": "Drag & drop, click to choose, or paste an image (Ctrl/⌘+V).",
@@ -12,7 +26,22 @@
     "adjust": "Straighten & crop",
     "cropHint": "Drag the box so it hugs the edges of the beads. Use rotation to straighten the rows.",
     "rotate": "Rotation",
-    "replace": "Use a different photo"
+    "replace": "Use a different photo",
+    "guideGood": "Good photo",
+    "guideGood1": "Solid plain background (white paper, pegboard)",
+    "guideGood2": "Shot straight from above",
+    "guideGood3": "Soft, even light",
+    "guideBad": "Avoid",
+    "guideBad1": "Patterned tablecloth or clutter",
+    "guideBad2": "Tilted angle",
+    "guideBad3": "Glare or strong shadows",
+    "oneClick": "One click: make my scarf",
+    "oneClickHint": "Lazy mode — crops, pixelizes, tidies and knits automatically. You can still go back and tweak any step.",
+    "working": "Working…",
+    "busyBg": "The background looks busy. For the best result, retake the photo on a solid plain background (white paper or the pegboard). You can also crop tightly or fix the background in the editor.",
+    "autoFailed": "Auto mode couldn’t finish — please try the steps manually.",
+    "autoCrop": "Auto crop",
+    "manual": "Do it step by step"
   },
   "pixelize": {
     "title": "Pixelize",
@@ -36,7 +65,12 @@
     "pattern": "Digital pattern",
     "confirm": "Use this pattern",
     "noImage": "Upload a photo first.",
-    "overwrite": "This will replace your edited pattern. Continue?"
+    "overwrite": "This will replace your edited pattern. Continue?",
+    "autoAll": "Auto (grid, colours, background)",
+    "autoDone": "Auto: {{w}} × {{h}} beads, {{n}} colours.",
+    "autoDoneGuess": "Auto: couldn’t see the bead grid, guessed {{w}} × {{h}} — please check. {{n}} colours.",
+    "removeEnclosed": "Also remove background inside the motif",
+    "bgHint": "Leftover background? Fix it in the next step with the 🪄 magic eraser."
   },
   "edit": {
     "colors": "Colours",
@@ -62,14 +96,30 @@
     "gridLines": "Grid",
     "zoom": "Zoom",
     "noGrid": "No pattern yet — start by uploading a photo.",
-    "tools": { "pencil": "Pencil", "eraser": "Eraser", "fill": "Fill", "picker": "Eyedropper", "replace": "Replace colour" },
+    "tools": {
+      "pencil": "Pencil",
+      "eraser": "Eraser",
+      "fill": "Fill",
+      "picker": "Eyedropper",
+      "replace": "Replace colour",
+      "wand": "Magic eraser",
+      "rect": "Rectangle"
+    },
     "toolHints": {
-      "pencil": "Click or drag to place beads",
+      "pencil": "Click or drag to place beads · brush size 1–3",
       "eraser": "Click or drag to remove beads",
       "fill": "Click to fill a connected area",
       "picker": "Click a bead to pick its colour",
-      "replace": "Click a bead to replace that colour everywhere"
-    }
+      "replace": "Click a bead to replace that colour everywhere",
+      "wand": "Click an area to erase everything connected of that colour (great for background)",
+      "rect": "Drag to fill a rectangle"
+    },
+    "autoTidy": "Auto tidy",
+    "autoTidyHint": "Removes leftover background around the edge and stray single beads.",
+    "paintWith": "Paint with",
+    "patternColors": "Colours in this pattern",
+    "photoOverlay": "Photo",
+    "opacity": "Opacity"
   },
   "chart": {
     "gauge": "Yarn & gauge",
@@ -111,7 +161,9 @@
     "size": "Size",
     "pdfTitle": "Bead to Scarf — knitting chart",
     "tipIntarsia": "Tip: with many colours, intarsia or duplicate stitch (embroidering the motif afterwards) is easier than stranded colourwork.",
-    "tipStranded": "Tip: with few colours this works well as stranded (Fair Isle) colourwork, or intarsia for large blocks."
+    "tipStranded": "Tip: with few colours this works well as stranded (Fair Isle) colourwork, or intarsia for large blocks.",
+    "auto": "Auto layout",
+    "autoHint": "Picks a matching main yarn and a classic layout from your defaults."
   },
   "scarf": {
     "title": "Scarf preview",
@@ -130,7 +182,9 @@
     "reroll": "New texture",
     "download": "Download image",
     "new": "New project",
-    "newConfirm": "Start a new project? Your current pattern will be cleared."
+    "newConfirm": "Start a new project? Your current pattern will be cleared.",
+    "machineView": "Knitting machine",
+    "finalView": "Finished scarf"
   },
   "settings": {
     "title": "Settings",
@@ -150,9 +204,63 @@
     "reset": "Reset all settings"
   },
   "bg": {
-    "cream": "Cream", "linen": "Linen", "peach": "Peach", "mint": "Mint", "sky": "Sky", "lilac": "Lilac",
-    "beads": "Beads", "knit": "Knit", "gingham": "Gingham", "dots": "Dots", "night": "Night",
-    "customColor": "Colour", "customImage": "Image"
+    "cream": "Cream",
+    "linen": "Linen",
+    "peach": "Peach",
+    "mint": "Mint",
+    "sky": "Sky",
+    "lilac": "Lilac",
+    "beads": "Beads",
+    "knit": "Knit",
+    "gingham": "Gingham",
+    "dots": "Dots",
+    "night": "Night",
+    "customColor": "Colour",
+    "customImage": "Image"
   },
-  "yarn": { "fingering": "Fingering (28 × 36)", "dk": "DK (22 × 30)", "worsted": "Worsted (20 × 28)", "bulky": "Bulky (14 × 20)", "custom": "Custom" }
+  "yarn": {
+    "fingering": "Fingering (28 × 36)",
+    "dk": "DK (22 × 30)",
+    "worsted": "Worsted (20 × 28)",
+    "bulky": "Bulky (14 × 20)",
+    "custom": "Custom"
+  },
+  "palette": {
+    "title": "Palette",
+    "defaultName": "My palette {{n}}",
+    "untitled": "Untitled palette",
+    "edit": "Edit palette",
+    "create": "New palette",
+    "name": "Name",
+    "colors": "Colours ({{n}})",
+    "empty": "No colours yet — add some below.",
+    "addFrom": "Add colours",
+    "addColor": "Add",
+    "fromPhoto": "From photo",
+    "fromPattern": "From pattern",
+    "fromBrand": "Copy a brand palette…",
+    "confirmDelete": "Delete this palette?",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "save": "Save",
+    "brands": "Bead brands",
+    "mine": "My palettes",
+    "manage": "Make / edit your own palette",
+    "editHint": "✎ edits this palette.",
+    "createHint": "＋ makes your own palette (e.g. only the beads you own).",
+    "none": "No palettes yet."
+  },
+  "machine": {
+    "auto": "Auto",
+    "manual": "Manual",
+    "pause": "Pause",
+    "play": "Play",
+    "speed": "Speed",
+    "restart": "Restart",
+    "skip": "Finish now",
+    "autoHint": "The machine knits by itself. Space = pause. Want to help? Drag the carriage, use ← → / A D, or scroll.",
+    "manualHint": "Push the carriage back and forth: drag it, hold ← → (or A / D), or scroll. Every pass knits a few rows!",
+    "done": "Your scarf is ready!",
+    "rows": "Row {{n}} / {{total}}"
+  }
 }

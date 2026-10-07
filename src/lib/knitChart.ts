@@ -66,6 +66,9 @@ export const DEFAULT_CHART_OPTIONS: ChartOptions = {
   yarnOverrides: {},
 };
 
+/** Main-yarn suggestions, soft neutrals first. */
+export const MAIN_YARNS = ['#f3ede2', '#ffffff', '#c9b79c', '#8c9aa8', '#2b2b2b', '#2d3a5c', '#7a2b33', '#506b4b'];
+
 /** Chart symbols, assigned in order. Index 0 (main yarn) is left blank. */
 export const SYMBOLS = ['', '●', '○', '▲', '△', '■', '□', '◆', '◇', '★', '☆', '✚', '✕', '♥', '♣', '♠', '♦', '◐', '◑', '▼', '▽', '/', '\\', '=', '#', '%', '@', '&', 'S', 'Z', 'Y', 'Q'];
 

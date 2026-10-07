@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Slider } from '../components/Field';
-import { FULL_CROP, loadImage, normaliseUpload, readFileAsDataUrl, transformImage, type CropRect } from '../lib/imageUtils';
+import { autoCrop } from '../lib/auto';
+import { runFullAuto } from '../lib/autoPipeline';
+import { FULL_CROP, canvasImageData, loadImage, normaliseUpload, readFileAsDataUrl, transformImage, workingImage, type CropRect } from '../lib/imageUtils';
+import { backgroundQuality } from '../lib/pixelize';
 import { useProject } from '../store/projectStore';
 
 type Drag = { mode: 'move' | 'nw' | 'ne' | 'sw' | 'se'; startX: number; startY: number; crop: CropRect } | null;
@@ -13,6 +16,8 @@ export function UploadStep() {
   const { image, rotation, crop, setImage, setTransform, goTo } = useProject();
   const [over, setOver] = useState(false);
   const [error, setError] = useState('');
+  const [bgQuality, setBgQuality] = useState<'good' | 'busy' | null>(null);
+  const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -39,6 +44,32 @@ export function UploadStep() {
     window.addEventListener('paste', onPaste);
     return () => window.removeEventListener('paste', onPaste);
   });
+
+  // Check whether the photo was taken on a clean, solid background.
+  useEffect(() => {
+    setBgQuality(null);
+    if (!image) return;
+    let alive = true;
+    workingImage(image, 0, FULL_CROP, 400).then((c) => alive && setBgQuality(backgroundQuality(canvasImageData(c))));
+    return () => { alive = false; };
+  }, [image]);
+
+  const doAutoCrop = async () => {
+    if (!image) return;
+    const full = await workingImage(image, rotation, FULL_CROP, 600);
+    setTransform({ crop: autoCrop(canvasImageData(full)) });
+  };
+
+  const oneClick = async () => {
+    setBusy(true);
+    try {
+      await runFullAuto();
+    } catch {
+      setError(t('upload.autoFailed'));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   // Draw the rotated (uncropped) image.
   useEffect(() => {
@@ -97,7 +128,20 @@ export function UploadStep() {
           <div className="big">📷</div>
           <h2>{t('upload.title')}</h2>
           <p className="hint">{t('upload.hint')}</p>
-          <p className="hint">{t('upload.tips')}</p>
+          <div className="photo-guide">
+            <div className="good">
+              <b>✅ {t('upload.guideGood')}</b>
+              <span>{t('upload.guideGood1')}</span>
+              <span>{t('upload.guideGood2')}</span>
+              <span>{t('upload.guideGood3')}</span>
+            </div>
+            <div className="bad">
+              <b>❌ {t('upload.guideBad')}</b>
+              <span>{t('upload.guideBad1')}</span>
+              <span>{t('upload.guideBad2')}</span>
+              <span>{t('upload.guideBad3')}</span>
+            </div>
+          </div>
           <button className="btn primary" style={{ marginTop: 12 }} onClick={(e) => { e.stopPropagation(); fileRef.current?.click(); }}>
             {t('upload.choose')}
           </button>
@@ -111,6 +155,13 @@ export function UploadStep() {
   return (
     <div className="step-layout">
       <div className="panel sidebar">
+        <button className="btn primary big" onClick={oneClick} disabled={busy}>
+          {busy ? `⏳ ${t('upload.working')}` : `✨ ${t('upload.oneClick')}`}
+        </button>
+        <p className="hint">{t('upload.oneClickHint')}</p>
+        {bgQuality === 'busy' && <div className="warn">⚠️ {t('upload.busyBg')}</div>}
+        {error && <div className="warn">{error}</div>}
+        <div className="divider" />
         <h3>{t('upload.adjust')}</h3>
         <p className="hint">{t('upload.cropHint')}</p>
         <Slider label={t('upload.rotate')} value={rotation} min={-45} max={45} step={0.5} onChange={(v) => setTransform({ rotation: v })} format={(v) => `${v}°`} />
@@ -119,10 +170,11 @@ export function UploadStep() {
           <button className="btn small" onClick={() => setTransform({ rotation: ((rotation + 90 + 540) % 360) - 180 })}>⟳ 90°</button>
           <button className="btn small ghost" onClick={() => setTransform({ rotation: 0, crop: FULL_CROP })}>{t('common.reset')}</button>
         </div>
+        <button className="btn small" onClick={doAutoCrop}>✨ {t('upload.autoCrop')}</button>
         <div className="divider" />
         <button className="btn" onClick={() => fileRef.current?.click()}>{t('upload.replace')}</button>
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => handleFile(e.target.files?.[0])} />
-        <button className="btn primary" onClick={() => goTo(1)}>{t('common.next')} →</button>
+        <button className="btn" onClick={() => goTo(1)}>{t('upload.manual')} →</button>
       </div>
       <div className="panel">
         <div className="stage center">

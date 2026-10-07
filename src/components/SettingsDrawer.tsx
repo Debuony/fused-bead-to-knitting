@@ -1,10 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PALETTES, AUTO_PALETTE_ID } from '../lib/palettes';
 import { readFileAsDataUrl, normaliseUpload } from '../lib/imageUtils';
 import { useProject } from '../store/projectStore';
 import { ACCENTS, BACKGROUND_PRESETS, YARN_WEIGHTS, useSettings, type Lang } from '../store/settingsStore';
 import { NumberField, Seg, Slider } from './Field';
+import { PaletteEditor } from './PaletteEditor';
+import { PaletteSelect } from './PaletteSelect';
 
 /** Applies theme settings to the document as CSS variables. */
 export function useApplyTheme() {
@@ -68,6 +69,7 @@ export function SettingsDrawer({ open, onClose }: { open: boolean; onClose: () =
   const s = useSettings();
   const setChartOptions = useProject((p) => p.setChartOptions);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [editor, setEditor] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
 
   useEffect(() => {
     if (!open) return;
@@ -175,10 +177,7 @@ export function SettingsDrawer({ open, onClose }: { open: boolean; onClose: () =
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <label className="field">
               {t('pixelize.palette')}
-              <select value={s.paletteId} onChange={(e) => s.set({ paletteId: e.target.value })}>
-                {PALETTES.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
-                <option value={AUTO_PALETTE_ID}>{t('pixelize.autoPalette')}</option>
-              </select>
+              <PaletteSelect value={s.paletteId} onChange={(v) => s.set({ paletteId: v })} />
             </label>
             <div className="row" style={{ display: 'flex', gap: 12 }}>
               <NumberField label={t('pixelize.width')} value={s.gridW} min={4} max={200} onChange={(v) => s.set({ gridW: v })} />
@@ -206,7 +205,25 @@ export function SettingsDrawer({ open, onClose }: { open: boolean; onClose: () =
           </div>
         </section>
 
+        <section>
+          <h4>{t('palette.mine')}</h4>
+          <div className="color-list">
+            {s.customPalettes.map((p) => (
+              <div key={p.id} className="color-item" onClick={() => setEditor({ open: true, id: p.id })}>
+                <span className="mini-swatches">
+                  {p.colors.slice(0, 8).map((c, i) => <i key={i} style={{ background: c.hex }} />)}
+                </span>
+                <span className="name">{p.label}</span>
+                <span className="n">✎</span>
+              </div>
+            ))}
+          </div>
+          {!s.customPalettes.length && <p className="hint">{t('palette.none')}</p>}
+          <button className="btn small" style={{ marginTop: 8 }} onClick={() => setEditor({ open: true, id: null })}>＋ {t('palette.create')}</button>
+        </section>
+
         <button className="btn" onClick={() => s.reset()}>↺ {t('settings.reset')}</button>
+        <PaletteEditor open={editor.open} paletteId={editor.id} onClose={() => setEditor({ open: false, id: null })} />
       </aside>
     </>
   );

@@ -1,17 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, NumberField, Seg, Slider } from '../components/Field';
+import { autoMainYarn } from '../lib/auto';
 import { renderChart } from '../lib/chartRender';
 import { contrastText } from '../lib/color';
 import { downloadCanvas, exportChartPdf } from '../lib/export';
 import {
-  autoScarfWidth, buildChart, chartSizeCm, motifSection, motifSize, yarnKey, yarnUsage,
+  MAIN_YARNS, autoScarfWidth, buildChart, chartSizeCm, motifSection, motifSize, yarnKey, yarnUsage,
   type BorderStyle, type Placement,
 } from '../lib/knitChart';
 import { useProject } from '../store/projectStore';
 import { YARN_WEIGHTS, useSettings } from '../store/settingsStore';
-
-const MAIN_YARNS = ['#f3ede2', '#ffffff', '#2b2b2b', '#c9b79c', '#8c9aa8', '#2d3a5c', '#7a2b33', '#506b4b'];
 
 export function ChartStep() {
   const { t } = useTranslation();
@@ -70,6 +69,18 @@ export function ChartStep() {
   return (
     <div className="step-layout">
       <div className="panel sidebar">
+        <button
+          className="btn primary"
+          onClick={() => setChartOptions({
+            gaugeSts: settings.gaugeSts, gaugeRows: settings.gaugeRows, lengthCm: settings.scarfLengthCm,
+            scarfWidthSts: settings.scarfWidthSts, motifWidthSts: 0, placement: 'ends', spacingRows: 8,
+            borderStyle: 'seed', borderSts: 4, bgHex: autoMainYarn(grid),
+          })}
+        >
+          ✨ {t('chart.auto')}
+        </button>
+        <p className="hint">{t('chart.autoHint')}</p>
+        <div className="divider" />
         <h3>{t('chart.gauge')}</h3>
         <label className="field">
           {t('chart.yarnWeight')}

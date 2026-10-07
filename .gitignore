@@ -4,3 +4,4 @@ dist
 *.local
 dist-single
 给朋友的测试包
+node_modules.nosync

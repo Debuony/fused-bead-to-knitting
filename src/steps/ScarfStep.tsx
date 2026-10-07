@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, Seg, Slider } from '../components/Field';
+import { KnittingMachine } from '../components/KnittingMachine';
 import { downloadCanvas } from '../lib/export';
 import { buildChart, chartSizeCm } from '../lib/knitChart';
 import { renderScarf } from '../lib/scarfRender';
@@ -9,6 +10,7 @@ import { useProject } from '../store/projectStore';
 export function ScarfStep() {
   const { t } = useTranslation();
   const { grid, chartOptions, scarfOptions: o, setScarfOptions, goTo } = useProject();
+  const [view, setView] = useState<'machine' | 'final'>('machine');
   const [fit, setFit] = useState(true);
   const [busy, setBusy] = useState(false);
   const holder = useRef<HTMLDivElement>(null);
@@ -17,7 +19,7 @@ export function ScarfStep() {
   const chart = useMemo(() => (grid ? buildChart(grid, chartOptions) : null), [grid, chartOptions]);
 
   useEffect(() => {
-    if (!chart || !holder.current) return;
+    if (!chart || !holder.current || view !== 'final') return;
     setBusy(true);
     // Let the spinner paint before the (synchronous) render.
     const id = window.setTimeout(() => {
@@ -31,7 +33,7 @@ export function ScarfStep() {
       setBusy(false);
     }, 30);
     return () => window.clearTimeout(id);
-  }, [chart, o, fit]);
+  }, [chart, o, fit, view]);
 
   if (!chart) {
     return (
@@ -48,11 +50,24 @@ export function ScarfStep() {
     <div className="step-layout right">
       <div className="panel" style={{ minWidth: 0 }}>
         <div className="toolbar">
+          <Seg
+            value={view}
+            onChange={setView}
+            options={[{ value: 'machine', label: `🧶 ${t('scarf.machineView')}` }, { value: 'final', label: `🖼 ${t('scarf.finalView')}` }]}
+          />
+        </div>
+        {view === 'machine' ? (
+          <KnittingMachine chart={chart} options={o} />
+        ) : (
+        <>
+        <div className="toolbar">
           <Seg value={fit ? 'fit' : 'zoom'} onChange={(v) => setFit(v === 'fit')} options={[{ value: 'fit', label: t('scarf.fit') }, { value: 'zoom', label: t('scarf.closeUp') }]} />
           <Seg value={o.orientation} onChange={(v) => setScarfOptions({ orientation: v })} options={[{ value: 'horizontal', label: t('scarf.horizontal') }, { value: 'vertical', label: t('scarf.vertical') }]} />
           <span className="hint">{busy ? `🧶 ${t('scarf.knitting')}` : `${size.widthCm.toFixed(0)} × ${size.lengthCm.toFixed(0)} cm`}</span>
         </div>
         <div className="stage center" ref={holder} style={{ background: 'transparent', maxHeight: fit ? undefined : '75vh', minHeight: 360 }} />
+        </>
+        )}
       </div>
 
       <div className="panel sidebar">
@@ -66,7 +81,13 @@ export function ScarfStep() {
         <Check label={t('scarf.shadow')} checked={o.shadow} onChange={(v) => setScarfOptions({ shadow: v })} />
         <button className="btn small ghost" onClick={() => setScarfOptions({ seed: Math.floor(Math.random() * 1e6) })}>🎲 {t('scarf.reroll')}</button>
         <div className="divider" />
-        <button className="btn primary" onClick={() => current.current && downloadCanvas(current.current, 'bead-scarf.png')}>⬇ {t('scarf.download')}</button>
+        <button
+          className="btn primary"
+          onClick={() => {
+            if (!chart) return;
+            downloadCanvas(view === 'final' && current.current ? current.current : renderScarf(chart, o), 'bead-scarf.png');
+          }}
+        >⬇ {t('scarf.download')}</button>
         <div className="footer-nav">
           <button className="btn" onClick={() => goTo(3)}>← {t('common.back')}</button>
           <button

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { AUTO_PALETTE_ID, type Palette } from '../lib/palettes';
 
 export type Lang = 'zh' | 'en';
 export type Mode = 'light' | 'dark' | 'auto';
@@ -70,6 +71,8 @@ export interface Settings {
   gaugeRows: number;
   scarfLengthCm: number;
   scarfWidthSts: number;
+  /** Palettes the user made themselves. */
+  customPalettes: Palette[];
 }
 
 export const YARN_WEIGHTS: Record<string, { sts: number; rows: number }> = {
@@ -91,7 +94,7 @@ export const DEFAULT_SETTINGS: Settings = {
   accent: ACCENTS[0],
   fontScale: 1,
   panelOpacity: 0.88,
-  paletteId: 'mard',
+  paletteId: AUTO_PALETTE_ID,
   gridW: 29,
   gridH: 29,
   maxColors: 10,
@@ -100,10 +103,14 @@ export const DEFAULT_SETTINGS: Settings = {
   gaugeRows: 28,
   scarfLengthCm: 160,
   scarfWidthSts: 0,
+  customPalettes: [],
 };
 
 interface SettingsState extends Settings {
   set: (patch: Partial<Settings>) => void;
+  savePalette: (p: Palette) => void;
+  deletePalette: (id: string) => void;
+  /** Resets appearance and defaults but keeps the user's own palettes. */
   reset: () => void;
 }
 
@@ -112,8 +119,28 @@ export const useSettings = create<SettingsState>()(
     (set) => ({
       ...DEFAULT_SETTINGS,
       set: (patch) => set(patch),
-      reset: () => set({ ...DEFAULT_SETTINGS }),
+      savePalette: (p) =>
+        set((s) => ({
+          customPalettes: s.customPalettes.some((x) => x.id === p.id)
+            ? s.customPalettes.map((x) => (x.id === p.id ? p : x))
+            : [...s.customPalettes, p],
+        })),
+      deletePalette: (id) =>
+        set((s) => ({
+          customPalettes: s.customPalettes.filter((x) => x.id !== id),
+          paletteId: s.paletteId === id ? AUTO_PALETTE_ID : s.paletteId,
+        })),
+      reset: () => set((s) => ({ ...DEFAULT_SETTINGS, customPalettes: s.customPalettes })),
     }),
-    { name: 'bead2scarf-settings', version: 1 },
+    {
+      name: 'bead2scarf-settings',
+      version: 2,
+      // v2: palette defaults to "auto" (colours from the photo); custom palettes added.
+      migrate: (old, version) => {
+        const s = old as Partial<Settings>;
+        if (version < 2) return { ...s, paletteId: AUTO_PALETTE_ID, customPalettes: [] } as Settings;
+        return s as Settings;
+      },
+    },
   ),
 );
