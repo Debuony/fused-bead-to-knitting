@@ -146,6 +146,8 @@ export function ScarfPlayground({ chart, options }: Props) {
     const ribbon = tex.t.sw * scale;
     const fabricHalf = fabricW / 2;
     const length = (tex.y1 - tex.y0) * scale;
+    // On-screen length of the fringe (12 stitches) plus the texture margin at each end.
+    const fringeLen = (options.fringe ? sp * 12 : 0) * scale;
     const N = Math.max(24, Math.min(90, Math.round(length / 12)));
     const seg = length / (N - 1);
     const edge = fabricHalf + 8;
@@ -227,7 +229,9 @@ export function ScarfPlayground({ chart, options }: Props) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, width, HEIGHT);
       // Shadow: a soft band under the scarf, pushed further out where it's lifted.
-      const shadowPts = spline(nodes.map((n) => ({ x: n.x + 3 + n.lift * 0.5, y: n.y + 5 + n.lift * 0.9 })), 4);
+      // Shadow under the knitted part only (the fringe at each end casts none).
+      const all = spline(nodes.map((n) => ({ x: n.x + 3 + n.lift * 0.5, y: n.y + 5 + n.lift * 0.9 })), 4);
+      const shadowPts = trimEnds(all, fringeLen);
       ctx.lineJoin = 'round';
       ctx.lineCap = 'butt';
       for (const [w, a] of [[fabricHalf * 2 + 10, 0.06], [fabricHalf * 2 + 2, 0.08], [fabricHalf * 2 - 8, 0.08]] as [number, number][]) {
@@ -321,7 +325,7 @@ export function ScarfPlayground({ chart, options }: Props) {
       canvas.removeEventListener('pointerup', onUp);
       canvas.removeEventListener('pointercancel', onUp);
     };
-  }, [tex, width, layoutKey, fabricW, sp, chart.w]);
+  }, [tex, width, layoutKey, fabricW, sp, chart.w, options.fringe]);
 
   return (
     <div className="playground">
@@ -427,4 +431,20 @@ function initialLayout(N: number, seg: number, w: number, h: number): Pt[] {
     out.push({ x: last.x - seg * 0.7, y: last.y + seg * 0.7 });
   }
   return out;
+}
+
+/** Cut `trim` px of path length off both ends of a polyline. */
+function trimEnds(pts: Pt[], trim: number): Pt[] {
+  if (trim <= 0 || pts.length < 2) return pts;
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
+  const total = cum[cum.length - 1];
+  if (total <= trim * 2) return pts.slice(0, 1);
+  const at = (d: number): Pt => {
+    let i = 1;
+    while (i < cum.length - 1 && cum[i] < d) i++;
+    const f = (d - cum[i - 1]) / (cum[i] - cum[i - 1] || 1);
+    return { x: pts[i - 1].x + (pts[i].x - pts[i - 1].x) * f, y: pts[i - 1].y + (pts[i].y - pts[i - 1].y) * f };
+  };
+  return [at(trim), ...pts.filter((_, i) => cum[i] > trim && cum[i] < total - trim), at(total - trim)];
 }

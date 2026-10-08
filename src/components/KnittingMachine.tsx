@@ -250,12 +250,19 @@ export function KnittingMachine({ chart, options, onDone, onJump }: Props) {
       const reveal = fabric ? (s.rows / chart.h) * fabric.height : 0;
       if (fabric && reveal > 0.5) {
         // Cheap soft shadow (a blurred shadow every frame would keep the page busy).
-        const visible = Math.min(reveal, HEIGHT - bedBottom);
-        const g = c.createLinearGradient(x0 + scarfW, 0, x0 + scarfW + 12, 0);
-        g.addColorStop(0, 'rgba(0,0,0,0.14)');
-        g.addColorStop(1, 'rgba(0,0,0,0)');
-        c.fillStyle = g;
-        c.fillRect(x0 + scarfW, bedBottom + 6, 12, visible);
+        // Only the knitted fabric casts this shadow — not the fringe or the texture's margins.
+        // Texture rows: [margin][fringe][fabric][fringe][margin], drawn bottom-aligned to the bed.
+        const pad = margin + (options.fringe ? sp * 12 : 0);
+        const top0 = bedBottom + 2 - (fabric.height - reveal); // screen y of texture row 0
+        const y0 = Math.max(bedBottom + 6, top0 + pad);
+        const y1 = Math.min(HEIGHT, bedBottom + 2 + reveal, top0 + fabric.height - pad);
+        if (y1 > y0) {
+          const g = c.createLinearGradient(x0 + scarfW, 0, x0 + scarfW + 12, 0);
+          g.addColorStop(0, 'rgba(0,0,0,0.14)');
+          g.addColorStop(1, 'rgba(0,0,0,0)');
+          c.fillStyle = g;
+          c.fillRect(x0 + scarfW, y0, 12, y1 - y0);
+        }
         c.drawImage(fabric, 0, fabric.height - reveal, fabric.width, reveal, x0 - margin, bedBottom + 2, fabric.width, reveal);
       }
 
