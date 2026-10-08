@@ -321,7 +321,11 @@
       "rounded": "Rounded",
       "hand": "Handwritten",
       "serif": "Serif",
-      "sans": "Clean"
+      "sans": "Clean",
+      "cursive": "Cursive",
+      "comic": "Comic",
+      "typewriter": "Typewriter",
+      "marker": "Marker"
     }
   },
   "physics": {

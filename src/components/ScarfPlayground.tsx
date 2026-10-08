@@ -39,12 +39,12 @@ export interface Physics {
 }
 
 export const DEFAULT_PHYSICS: Physics = {
-  handSpan: 0.14,
-  hold: 0.55,
+  handSpan: 0.05,
+  hold: 0.5,
   follow: 0.35,
-  stiffness: 0.55,
-  tableDamping: 0.78,
-  airDamping: 0.9,
+  stiffness: 1,
+  tableDamping: 0.3,
+  airDamping: 0.5,
   smoothing: 0.18,
   liftHeight: 22,
   iterations: 20,

@@ -6,7 +6,7 @@ import { KnittingMachine } from '../components/KnittingMachine';
 import { ScarfPlayground } from '../components/ScarfPlayground';
 import { downloadCanvas } from '../lib/export';
 import { buildChart, chartSizeCm, type KnitChart } from '../lib/knitChart';
-import { HAIR_COLORS, HAIR_STYLES, MESSAGE_FONTS, MOCKUP_SCENES, SKIN_TONES, hasAvatar, type MessageFont, type MockupScene } from '../lib/mockup';
+import { FONT_STACKS, HAIR_COLORS, HAIR_STYLES, MESSAGE_FONTS, MOCKUP_SCENES, SKIN_TONES, hasAvatar, type MessageFont, type MockupScene } from '../lib/mockup';
 import { toPageCanvas } from '../lib/canvas';
 import { render } from '../lib/renderClient';
 import type { RenderJob } from '../lib/renderJobs';
@@ -265,7 +265,7 @@ export function ScarfStep() {
                 <Seg<MessageFont>
                   value={m.messageFont}
                   onChange={(v) => setMockupOptions({ messageFont: v })}
-                  options={MESSAGE_FONTS.map((f) => ({ value: f, label: t(`mockup.font.${f}`) }))}
+                  options={MESSAGE_FONTS.map((f) => ({ value: f, label: <span style={{ fontFamily: FONT_STACKS[f].family }}>{t(`mockup.font.${f}`)}</span> }))}
                 />
                 <Slider
                   label={t('mockup.fontSize')}

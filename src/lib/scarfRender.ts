@@ -158,13 +158,14 @@ function curlPixels(src: ImageData, amount: number): ImageData {
   const H = src.height;
   const out = new ImageData(W, H);
   const cx = W / 2;
-  // The roll eases in over the first/last ~5% (cast-on and bind-off flare out a little).
-  const endZone = Math.max(1, H * 0.05);
+  // Rolls right up to the ends — the cast-on/bind-off edge is soft and rolls too,
+  // only easing very slightly in the last ~3%.
+  const endZone = Math.max(1, H * 0.03);
   const L = [-0.42, 0.88]; // light from the left, mostly frontal (x, z)
   for (let y = 0; y < H; y++) {
     const e0 = Math.min(1, Math.min(y, H - 1 - y) / endZone);
     const e = e0 * e0 * (3 - 2 * e0);
-    const a = amount * (0.55 + 0.45 * e);
+    const a = amount * (0.88 + 0.12 * e);
     const outHalf = (W / 2) * (1 - 0.62 * a);
     const srcHalf = (W / 2) * (1 - 0.5 * a);
     // How far around the cylinder the visible face reaches (flat → 0, full tube → 90°).
@@ -371,7 +372,7 @@ function drawFringe(ctx: Ctx2D, chart: KnitChart, opts: ScarfRenderOptions, offs
   const group = 3;
   const mid = (chart.w * w) / 2;
   // Matches the rolled fabric's outer width at the ends.
-  const squeeze = 1 - 0.62 * curl * 0.55;
+  const squeeze = 1 - 0.62 * curl * 0.88;
   for (let x = 1; x < chart.w - 1; x += group) {
     const hex = chart.yarns[chart.cells[row * chart.w + Math.min(chart.w - 1, x + 1)]].hex;
     const rel = ((x + group / 2) * w - mid) / mid; // -1 (left edge) … 1 (right edge)
