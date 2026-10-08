@@ -50,6 +50,9 @@ export interface KnitChart {
   motifs: Rect[];
   gaugeSts: number;
   gaugeRows: number;
+  /** Edge treatment, used to predict how much the fabric curls. */
+  borderStyle: BorderStyle;
+  borderSts: number;
 }
 
 export const DEFAULT_CHART_OPTIONS: ChartOptions = {
@@ -162,7 +165,10 @@ export function buildChart(grid: Grid, opts: ChartOptions): KnitChart {
     if (bottom - mh - top >= mh + opts.spacingRows) place(top, true);
   }
 
-  return { w: W, h: H, cells, stitch, yarns, motifs, gaugeSts: opts.gaugeSts, gaugeRows: opts.gaugeRows };
+  return {
+    w: W, h: H, cells, stitch, yarns, motifs, gaugeSts: opts.gaugeSts, gaugeRows: opts.gaugeRows,
+    borderStyle: opts.borderSts > 0 ? opts.borderStyle : 'none', borderSts: opts.borderSts,
+  };
 }
 
 export interface YarnUsage {

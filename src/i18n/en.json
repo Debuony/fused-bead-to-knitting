@@ -169,7 +169,11 @@
     "auto": "Auto layout",
     "autoHint": "Picks a matching main yarn and a classic layout from your defaults.",
     "sizeTitle": "Size",
-    "stsRowsShort": "sts × rows"
+    "stsRowsShort": "sts × rows",
+    "tabChart": "Chart",
+    "legendHint": "click a colour or name to change it to the yarn you bought.",
+    "customSize": "Custom size",
+    "suggested": "Suggested for your motif"
   },
   "scarf": {
     "title": "Scarf preview",
@@ -191,7 +195,27 @@
     "newConfirm": "Start a new project? Your current pattern will be cleared.",
     "machineView": "Knitting machine",
     "finalView": "Finished scarf",
-    "texture": "Texture & look"
+    "texture": "Texture & look",
+    "mockupView": "Mockups",
+    "yarnType": "Yarn",
+    "wool": "Wool",
+    "mohair": "Mohair",
+    "colorChange": "Colour-changing yarn",
+    "solid": "Solid",
+    "gradient": "Gradient",
+    "stripes": "Self-striping",
+    "changeColors": "Colours (click to change)",
+    "curl": "Edge curl",
+    "curlAuto": "Realistic",
+    "curlOff": "Flat",
+    "curlOn": "Sausage",
+    "curlAmount": "Curl amount",
+    "curlWarn": "Plain stockinette with no edge rolls up into a sausage!",
+    "curlSome": "A narrow edge only partly stops the curling.",
+    "curlFine": "The edge stitch keeps this scarf flat.",
+    "addBorder": "Add an edge →",
+    "curlForced": "This is how plain stockinette rolls up without an edge pattern.",
+    "curlFlat": "Shown flat, as if blocked."
   },
   "settings": {
     "title": "Settings",
@@ -266,5 +290,14 @@
     "rows": "Row {{n}} / {{total}}",
     "jump": "Jump to the finished scarf",
     "hint": "Help the machine: hold SPACE or just type anything to knit · ← → push the carriage · or drag it."
+  },
+  "mockup": {
+    "trench": "Trench coat",
+    "y2k": "Y2K",
+    "giftbox": "Gift box",
+    "flatlay": "Flat lay",
+    "tag": "Gift tag text",
+    "defaultTag": "handmade with love ♡",
+    "download": "Download mockup"
   }
 }

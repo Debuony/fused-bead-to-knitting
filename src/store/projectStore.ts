@@ -120,7 +120,13 @@ export const useProject = create<ProjectState>()(
       }),
       merge: (persisted, current) => {
         const p = persisted as Partial<ProjectState>;
-        const merged = { ...current, ...p };
+        const merged = {
+          ...current,
+          ...p,
+          // Fill in options added in later versions.
+          chartOptions: { ...DEFAULT_CHART_OPTIONS, ...p.chartOptions },
+          scarfOptions: { ...DEFAULT_SCARF_OPTIONS, ...p.scarfOptions },
+        };
         // Without a photo or grid, earlier steps can't be resumed.
         if (!merged.grid) return { ...merged, step: 0, maxStep: 0 };
         if (merged.step < 2) merged.step = 2;

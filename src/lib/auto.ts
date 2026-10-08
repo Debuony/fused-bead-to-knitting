@@ -1,4 +1,4 @@
-import { deltaE, hexToRgb, rgbToLab, type RGB } from './color';
+import { deltaE, hexToRgb, rgbToLab, shade, type RGB } from './color';
 import { EMPTY, countColors, floodFill, type Grid } from './grid';
 import type { CropRect } from './imageUtils';
 import { MAIN_YARNS } from './knitChart';
@@ -196,4 +196,37 @@ export function autoMainYarn(g: Grid): string {
     if (d > bestD) { bestD = d; best = hex; }
   }
   return best;
+}
+
+/**
+ * Main-yarn ideas that suit the motif: soft neutrals plus pale tints and deep
+ * shades of the motif's own colours, keeping only ones that stand apart from it.
+ */
+export function suggestMainYarns(g: Grid, n = 3): string[] {
+  const counts = countColors(g);
+  const motif = g.colors
+    .map((c, i) => ({ hex: c.hex, n: counts[i] }))
+    .filter((x) => x.n > 0)
+    .sort((a, b) => b.n - a.n);
+  const labs = motif.map((m) => rgbToLab(hexToRgb(m.hex)));
+  if (!labs.length) return MAIN_YARNS.slice(0, n);
+  const pool = new Set<string>(MAIN_YARNS);
+  for (const m of motif.slice(0, 3)) {
+    pool.add(shade(m.hex, 0.72));
+    pool.add(shade(m.hex, -0.55));
+  }
+  const scored = [...pool]
+    .map((hex) => {
+      const lab = rgbToLab(hexToRgb(hex));
+      const d = Math.min(...labs.map((l) => deltaE(l, lab)));
+      const neutral = Math.hypot(lab[1], lab[2]) < 12;
+      return { hex, lab, score: Math.min(d, 45) + (neutral ? 8 : 0) - (d < 20 ? 100 : 0) };
+    })
+    .sort((a, b) => b.score - a.score);
+  const picks: typeof scored = [];
+  for (const c of scored) {
+    if (picks.length >= n) break;
+    if (picks.every((p) => deltaE(p.lab, c.lab) > 12)) picks.push(c);
+  }
+  return picks.map((p) => p.hex);
 }

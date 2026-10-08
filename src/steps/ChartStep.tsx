@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActionRail, More } from '../components/ActionRail';
 import { Check, NumberField, Seg, Slider } from '../components/Field';
-import { autoMainYarn } from '../lib/auto';
+import { autoMainYarn, suggestMainYarns } from '../lib/auto';
+import { MiniScarf } from '../components/MiniScarf';
 import { renderChart } from '../lib/chartRender';
 import { contrastText } from '../lib/color';
 import { downloadCanvas, exportChartPdf } from '../lib/export';
@@ -21,6 +22,7 @@ export function ChartStep() {
   const [colored, setColored] = useState(true);
   const [symbols, setSymbols] = useState(true);
   const [cell, setCell] = useState(14);
+  const [tab, setTab] = useState<'chart' | 'legend'>('chart');
   const holder = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -47,6 +49,14 @@ export function ChartStep() {
   }
 
   const { mw, mh } = motifSize(grid, o);
+  const suggested = suggestMainYarns(grid);
+  const widthCmNow = (chart.w * 10) / o.gaugeSts;
+  const activePreset = SIZE_PRESETS.find((p) => Math.abs(p.w - widthCmNow) < 1.5 && p.l === o.lengthCm)?.id ?? null;
+  const applyPreset = (p: (typeof SIZE_PRESETS)[number]) => {
+    const widthSts = Math.round((p.w * o.gaugeSts) / 10);
+    const inner = Math.max(4, widthSts - 2 * o.borderSts);
+    setChartOptions({ scarfWidthSts: widthSts, lengthCm: p.l, motifWidthSts: Math.max(4, Math.round(inner * 0.72)) });
+  };
   const size = chartSizeCm(chart);
   const usage = yarnUsage(chart);
   const totalM = usage.reduce((a, u) => a + u.meters, 0);
@@ -79,28 +89,45 @@ export function ChartStep() {
             </button>
           ))}
         </div>
+        <MiniScarf chart={chart} />
         {o.placement !== 'center' && (
           <Slider label={t('chart.spacing')} value={o.spacingRows} min={0} max={60} onChange={(v) => setChartOptions({ spacingRows: v })} />
         )}
         <div className="divider" />
         <h3>{t('chart.sizeTitle')}</h3>
-        <Slider label={t('chart.motifWidth')} value={mw} min={4} max={Math.max(120, grid.w * 3)} onChange={(v) => setChartOptions({ motifWidthSts: v === grid.w ? 0 : v })} format={(v) => `${v} ${t('chart.sts')}`} />
-        <div style={{ display: 'flex', gap: 10 }}>
-          <NumberField
-            label={t('chart.scarfWidth')}
-            value={chart.w}
-            min={mw + 2 * o.borderSts}
-            max={400}
-            onChange={(v) => setChartOptions({ scarfWidthSts: v === autoScarfWidth(mw, o.borderSts) ? 0 : v })}
-          />
-          <NumberField label={`${t('chart.length')} (cm)`} value={o.lengthCm} min={20} max={400} onChange={(v) => setChartOptions({ lengthCm: v })} />
+        <div className="size-presets">
+          {SIZE_PRESETS.map((p) => (
+            <button key={p.id} className={`layout-card ${activePreset === p.id ? 'on' : ''}`} onClick={() => applyPreset(p)}>
+              <b style={{ fontSize: '1.1rem' }}>{p.id}</b>
+              <span className="hint">{p.w}×{p.l}</span>
+            </button>
+          ))}
         </div>
         <p className="hint">≈ {size.widthCm.toFixed(0)} × {size.lengthCm.toFixed(0)} cm · {t('chart.motifRows', { rows: mh })}</p>
+        <Slider label={t('chart.motifWidth')} value={mw} min={4} max={Math.max(120, grid.w * 3)} onChange={(v) => setChartOptions({ motifWidthSts: v === grid.w ? 0 : v })} format={(v) => `${v} ${t('chart.sts')}`} />
+        <More title={t('chart.customSize')} open={activePreset === null}>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <NumberField
+              label={t('chart.scarfWidth')}
+              value={chart.w}
+              min={mw + 2 * o.borderSts}
+              max={400}
+              onChange={(v) => setChartOptions({ scarfWidthSts: v === autoScarfWidth(mw, o.borderSts) ? 0 : v })}
+            />
+            <NumberField label={`${t('chart.length')} (cm)`} value={o.lengthCm} min={20} max={400} onChange={(v) => setChartOptions({ lengthCm: v })} />
+          </div>
+        </More>
         <div className="divider" />
         <div className="field">
           {t('chart.mainYarn')}
+          <span className="hint">✨ {t('chart.suggested')}</span>
           <div className="swatches">
-            {MAIN_YARNS.map((h) => (
+            {suggested.map((h) => (
+              <button key={h} className={`swatch suggested ${o.bgHex === h ? 'on' : ''}`} style={{ background: h }} title={h} onClick={() => setChartOptions({ bgHex: h })} />
+            ))}
+          </div>
+          <div className="swatches">
+            {MAIN_YARNS.filter((h) => !suggested.includes(h)).map((h) => (
               <button key={h} className={`swatch ${o.bgHex === h ? 'on' : ''}`} style={{ background: h }} onClick={() => setChartOptions({ bgHex: h })} />
             ))}
             <label className="swatch custom" title={t('edit.customColor')}>
@@ -143,8 +170,15 @@ export function ChartStep() {
         </More>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
-        <div className="panel">
+      <div className="panel" style={{ minWidth: 0 }}>
+        <div className="toolbar">
+          <Seg
+            value={tab}
+            onChange={setTab}
+            options={[{ value: 'chart', label: `📋 ${t('chart.tabChart')}` }, { value: 'legend', label: `🎨 ${t('chart.legend')} (${chart.yarns.length})` }]}
+          />
+        </div>
+        <div style={{ display: tab === 'chart' ? 'block' : 'none' }}>
           <div className="toolbar">
             <Seg value={view} onChange={setView} options={[{ value: 'motif', label: t('chart.viewMotif') }, { value: 'full', label: t('chart.viewFull') }]} />
             <Check label={t('chart.colored')} checked={colored} onChange={setColored} />
@@ -160,8 +194,8 @@ export function ChartStep() {
           <div className="stage" ref={holder} style={{ maxHeight: '65vh' }} />
         </div>
 
-        <div className="panel">
-          <h3>{t('chart.legend')} · {chart.w} × {chart.h} {t('chart.stsRowsShort')}</h3>
+        <div style={{ display: tab === 'legend' ? 'block' : 'none' }}>
+          <p className="hint" style={{ marginBottom: 8 }}>{chart.w} × {chart.h} {t('chart.stsRowsShort')} · {t('chart.legendHint')}</p>
           <table className="legend">
             <thead>
               <tr><th></th><th>{t('chart.symbol')}</th><th>{t('chart.yarnName')}</th><th>{t('chart.sts')}</th><th>{t('chart.yarnLen')}</th></tr>
@@ -206,6 +240,13 @@ export function ChartStep() {
 }
 
 const PLACEMENTS: Placement[] = ['ends', 'center', 'repeat'];
+
+/** Common scarf sizes in cm (width × length). */
+const SIZE_PRESETS = [
+  { id: 'S', w: 15, l: 120 },
+  { id: 'M', w: 20, l: 160 },
+  { id: 'L', w: 28, l: 190 },
+] as const;
 
 /** Tiny scarf diagram showing where motifs go. */
 function PlacementIcon({ placement }: { placement: Placement }) {

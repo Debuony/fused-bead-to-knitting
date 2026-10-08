@@ -169,7 +169,11 @@
     "auto": "自动布局",
     "autoHint": "根据默认设置自动选择搭配的主色线和经典布局。",
     "sizeTitle": "尺寸",
-    "stsRowsShort": "针 × 行"
+    "stsRowsShort": "针 × 行",
+    "tabChart": "花卡",
+    "legendHint": "点颜色或名字，可以改成你实际买到的毛线。",
+    "customSize": "自定义尺寸",
+    "suggested": "适合你图案的推荐"
   },
   "scarf": {
     "title": "围巾预览",
@@ -191,7 +195,27 @@
     "newConfirm": "要开始新项目吗？当前图纸将被清空。",
     "machineView": "针织机",
     "finalView": "成品效果",
-    "texture": "质感与外观"
+    "texture": "质感与外观",
+    "mockupView": "效果图",
+    "yarnType": "毛线种类",
+    "wool": "羊毛",
+    "mohair": "马海毛",
+    "colorChange": "换色线",
+    "solid": "纯色",
+    "gradient": "渐变",
+    "stripes": "段染",
+    "changeColors": "颜色（点击修改）",
+    "curl": "卷边",
+    "curlAuto": "真实模拟",
+    "curlOff": "平整",
+    "curlOn": "腊肠",
+    "curlAmount": "卷边程度",
+    "curlWarn": "没有边缘花样的平针会卷成腊肠哦！",
+    "curlSome": "边缘太窄，只能部分防止卷边。",
+    "curlFine": "边缘花样让这条围巾保持平整。",
+    "addBorder": "去加个边缘 →",
+    "curlForced": "没有边缘花样的平针，就会这样卷起来。",
+    "curlFlat": "平整展示（像定型后的样子）。"
   },
   "settings": {
     "title": "设置",
@@ -266,5 +290,14 @@
     "rows": "第 {{n}} / {{total}} 行",
     "jump": "直接看成品",
     "hint": "帮针织机一把：按住空格，或者随便打字就会织 · ← → 手动推机头 · 也可以用鼠标拖。"
+  },
+  "mockup": {
+    "trench": "风衣",
+    "y2k": "Y2K",
+    "giftbox": "礼盒",
+    "flatlay": "平铺",
+    "tag": "礼物卡片文字",
+    "defaultTag": "亲手织的围巾 ♡",
+    "download": "下载效果图"
   }
 }
