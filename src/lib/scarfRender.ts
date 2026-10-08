@@ -488,22 +488,28 @@ export function renderScarf(source: KnitChart, opts: ScarfRenderOptions): Canvas
  * disagree on those, which could show stray copies of the scarf).
  */
 function softCopy(src: Canvas, blurPx: number, color: string): Canvas {
-  const quarter = makeCanvas(src.width / 4, src.height / 4);
-  // Shrink further the more blur we want, then scale back up: a cheap, even blur.
-  const k = Math.max(1, Math.min(6, Math.round(blurPx / 4)));
-  const tiny = makeCanvas(quarter.width / k, quarter.height / k);
-  const tctx = ctx2d(tiny);
-  tctx.imageSmoothingEnabled = true;
-  tctx.imageSmoothingQuality = 'high';
-  tctx.drawImage(src, 0, 0, tiny.width, tiny.height);
-  const qctx = ctx2d(quarter);
-  qctx.imageSmoothingEnabled = true;
-  qctx.imageSmoothingQuality = 'high';
-  qctx.drawImage(tiny, 0, 0, quarter.width, quarter.height);
-  qctx.globalCompositeOperation = 'source-in';
-  qctx.fillStyle = color;
-  qctx.fillRect(0, 0, quarter.width, quarter.height);
-  return quarter;
+  // Shrink by at most 4× (so the scarf's gentle wave survives) and let bilinear
+  // upscaling do the softening; a second, smaller pass softens a bit more.
+  const k = Math.max(1, Math.min(4, blurPx / 3));
+  const small = makeCanvas(src.width / k, src.height / k);
+  const sctx = ctx2d(small);
+  sctx.imageSmoothingEnabled = true;
+  sctx.imageSmoothingQuality = 'high';
+  sctx.drawImage(src, 0, 0, small.width, small.height);
+  const half = makeCanvas(small.width / 2, small.height / 2);
+  const hctx = ctx2d(half);
+  hctx.imageSmoothingEnabled = true;
+  hctx.drawImage(small, 0, 0, half.width, half.height);
+  sctx.clearRect(0, 0, small.width, small.height);
+  sctx.globalAlpha = 0.6;
+  sctx.drawImage(src, 0, 0, small.width, small.height);
+  sctx.globalAlpha = 0.4;
+  sctx.drawImage(half, 0, 0, small.width, small.height);
+  sctx.globalAlpha = 1;
+  sctx.globalCompositeOperation = 'source-in';
+  sctx.fillStyle = color;
+  sctx.fillRect(0, 0, small.width, small.height);
+  return small;
 }
 
 function renderScarfUncached(source: KnitChart, opts: ScarfRenderOptions): Canvas {
@@ -558,11 +564,11 @@ function renderScarfUncached(source: KnitChart, opts: ScarfRenderOptions): Canva
   // soft anyway, and blurring a full-size scarf is the slowest step otherwise.
   const v = makeCanvas(outW, outH);
   const ctx = ctx2d(v);
-  if (opts.shadow) ctx.drawImage(softCopy(body, w * 3, 'rgba(0,0,0,0.32)'), w * 0.6, w * 1.2, outW, outH);
+  if (opts.shadow) ctx.drawImage(softCopy(body, w * 1.6, 'rgba(0,0,0,0.26)'), w * 0.3, w * 0.7, outW, outH);
   if (opts.yarnType === 'mohair') {
     // Fuzzy halo in the main yarn's colour.
     const [r, g, b] = hexToRgb(shade(chart.yarns[0].hex, 0.15));
-    ctx.drawImage(softCopy(body, Math.max(4, w * 1.6), `rgba(${r},${g},${b},0.85)`), 0, 0, outW, outH);
+    ctx.drawImage(softCopy(body, Math.max(4, w * 1.4), `rgba(${r},${g},${b},0.85)`), 0, 0, outW, outH);
   }
   ctx.drawImage(body, 0, 0);
 
