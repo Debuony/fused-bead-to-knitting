@@ -1,4 +1,4 @@
-import type { Grid } from './grid';
+import { EMPTY, rotate90, type Grid } from './grid';
 
 export type Placement = 'center' | 'repeat' | 'ends';
 export type BorderStyle = 'none' | 'garter' | 'seed';
@@ -8,8 +8,10 @@ export interface ChartOptions {
   gaugeSts: number;
   /** Rows per 10 cm. */
   gaugeRows: number;
-  /** Width of the motif in stitches (0 = one stitch per bead). */
+  /** Width of the motif in stitches (0 = automatic: one stitch per bead, capped to a scarf's width). */
   motifWidthSts: number;
+  /** Wide patterns: 'auto' stacks side-by-side pieces into a column (or turns a single wide motif) so it runs along the scarf. */
+  motifLayout: 'auto' | 'asis';
   /** Total scarf width in stitches (0 = automatic). */
   scarfWidthSts: number;
   /** Scarf length in cm. */
@@ -59,6 +61,7 @@ export const DEFAULT_CHART_OPTIONS: ChartOptions = {
   gaugeSts: 20,
   gaugeRows: 28,
   motifWidthSts: 0,
+  motifLayout: 'auto',
   scarfWidthSts: 0,
   lengthCm: 160,
   placement: 'ends',
@@ -75,9 +78,70 @@ export const MAIN_YARNS = ['#f3ede2', '#ffffff', '#c9b79c', '#8c9aa8', '#2b2b2b'
 /** Chart symbols, assigned in order. Index 0 (main yarn) is left blank. */
 export const SYMBOLS = ['', '●', '○', '▲', '△', '■', '□', '◆', '◇', '★', '☆', '✚', '✕', '♥', '♣', '♠', '♦', '◐', '◑', '▼', '▽', '/', '\\', '=', '#', '%', '@', '&', 'S', 'Z', 'Y', 'Q'];
 
+/** Widest scarf we lay a motif across automatically, in cm. */
+const MAX_AUTO_WIDTH_CM = 30;
+
+/** Column ranges that contain beads, separated by fully empty columns. */
+function pieces(g: Grid): [number, number][] {
+  const used = Array.from({ length: g.w }, (_, x) => {
+    for (let y = 0; y < g.h; y++) if (g.cells[y * g.w + x] !== EMPTY) return true;
+    return false;
+  });
+  const out: [number, number][] = [];
+  for (let x = 0; x < g.w; x++) {
+    if (!used[x]) continue;
+    let e = x;
+    while (e + 1 < g.w && used[e + 1]) e++;
+    out.push([x, e]);
+    x = e;
+  }
+  return out;
+}
+
+/** Trim empty rows above and below a column range. */
+function slice(g: Grid, x0: number, x1: number): Grid {
+  let y0 = g.h;
+  let y1 = -1;
+  for (let y = 0; y < g.h; y++)
+    for (let x = x0; x <= x1; x++)
+      if (g.cells[y * g.w + x] !== EMPTY) { y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  const w = x1 - x0 + 1;
+  const h = Math.max(1, y1 - y0 + 1);
+  const cells = new Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) cells[y * w + x] = g.cells[(y + y0) * g.w + x + x0];
+  return { ...g, w, h, cells };
+}
+
+/**
+ * A scarf is long and narrow, so a wide pattern is rearranged to run along it:
+ * several pieces side by side (like a row of bead charms) are stacked into a
+ * column, each staying upright; a single very wide motif is turned 90°.
+ */
+export function arrangeMotif(grid: Grid, layout: ChartOptions['motifLayout'] = 'auto'): Grid {
+  if (layout === 'asis' || grid.w <= grid.h * 1.6) return grid;
+  const parts = pieces(grid);
+  if (parts.length >= 2) {
+    const slices = parts.map(([a, b]) => slice(grid, a, b));
+    const gap = 2;
+    const w = Math.max(...slices.map((p) => p.w));
+    const h = slices.reduce((s, p) => s + p.h, 0) + gap * (slices.length - 1);
+    const cells = new Array(w * h).fill(EMPTY);
+    let y0 = 0;
+    for (const p of slices) {
+      const x0 = Math.floor((w - p.w) / 2);
+      for (let y = 0; y < p.h; y++) for (let x = 0; x < p.w; x++) cells[(y0 + y) * w + x0 + x] = p.cells[y * p.w + x];
+      y0 += p.h + gap;
+    }
+    return { ...grid, w, h, cells };
+  }
+  return grid.w > grid.h * 2.2 ? rotate90(grid) : grid;
+}
+
 /** Number of chart rows the motif needs so it keeps its proportions despite non-square stitches. */
-export function motifSize(grid: Grid, opts: Pick<ChartOptions, 'gaugeSts' | 'gaugeRows' | 'motifWidthSts'>) {
-  const mw = opts.motifWidthSts > 0 ? opts.motifWidthSts : grid.w;
+export function motifSize(grid: Grid, opts: Pick<ChartOptions, 'gaugeSts' | 'gaugeRows' | 'motifWidthSts'> & { borderSts?: number }) {
+  // Automatic width: one stitch per bead, but never wider than a real scarf.
+  const maxAuto = Math.max(8, Math.round((MAX_AUTO_WIDTH_CM * opts.gaugeSts) / 10) - 2 * (opts.borderSts ?? 0) - 4);
+  const mw = opts.motifWidthSts > 0 ? opts.motifWidthSts : Math.min(grid.w, maxAuto);
   const beadSts = mw / grid.w; // stitches per bead horizontally
   const mh = Math.max(1, Math.round(grid.h * beadSts * (opts.gaugeRows / opts.gaugeSts)));
   return { mw, mh };
@@ -106,7 +170,8 @@ export function autoScarfWidth(mw: number, borderSts: number) {
   return mw + 2 * borderSts + 2 * Math.max(2, Math.round(mw * 0.1));
 }
 
-export function buildChart(grid: Grid, opts: ChartOptions): KnitChart {
+export function buildChart(source: Grid, opts: ChartOptions): KnitChart {
+  const grid = arrangeMotif(source, opts.motifLayout);
   const { mw, mh } = motifSize(grid, opts);
   const b = Math.max(0, opts.borderSts);
   const minW = mw + 2 * b;

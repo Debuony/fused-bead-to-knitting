@@ -3,7 +3,7 @@ import { EMPTY, countColors, floodFill, type Grid } from './grid';
 import type { CropRect } from './imageUtils';
 import { MAIN_YARNS } from './knitChart';
 import type { PaletteColor } from './palettes';
-import { autoTolerance, detectGridCount, estimateBackground, pixelize, sampleCells, type ImageLike } from './pixelize';
+import { autoTolerance, detectPitch, estimateBackground, pixelize, sampleCells, type ImageLike } from './pixelize';
 import { kmeans } from './quantize';
 
 /** Bounding box of everything that isn't background, as a fraction of the image. */
@@ -76,12 +76,9 @@ export function autoCrop(img: ImageLike): CropRect {
 
 /** Bead count from the photo's periodic texture, falling back to the aspect ratio. */
 export function autoGridSize(img: ImageLike): { w: number; h: number; detected: boolean } {
-  const w = detectGridCount(img, 'x');
-  const h = detectGridCount(img, 'y');
+  const pitch = detectPitch(img);
+  if (pitch) return { w: Math.max(2, Math.round(img.width / pitch)), h: Math.max(2, Math.round(img.height / pitch)), detected: true };
   const aspect = img.height / img.width;
-  if (w && h) return { w, h, detected: true };
-  if (w) return { w, h: Math.max(2, Math.round(w * aspect)), detected: true };
-  if (h) return { w: Math.max(2, Math.round(h / aspect)), h, detected: true };
   return aspect >= 1
     ? { w: Math.max(2, Math.round(29 / aspect)), h: 29, detected: false }
     : { w: 29, h: Math.max(2, Math.round(29 * aspect)), detected: false };

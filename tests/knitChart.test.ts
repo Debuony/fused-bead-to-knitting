@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createGrid, type Grid } from '../src/lib/grid';
-import { DEFAULT_CHART_OPTIONS, buildChart, motifSize, yarnUsage } from '../src/lib/knitChart';
+import { DEFAULT_CHART_OPTIONS, arrangeMotif, buildChart, motifSize, yarnUsage } from '../src/lib/knitChart';
 
 function sampleGrid(): Grid {
   const g = createGrid(10, 10, [
@@ -47,5 +47,22 @@ describe('knitChart', () => {
   it('applies yarn overrides', () => {
     const chart = buildChart(sampleGrid(), { ...DEFAULT_CHART_OPTIONS, yarnOverrides: { '#ff0000': { name: 'Cherry' } } });
     expect(chart.yarns[1].name).toBe('Cherry');
+  });
+
+  it('stacks side-by-side pieces into an upright column', () => {
+    // Three 2x2 pieces in a row with empty columns between them.
+    const g = createGrid(8, 2, [{ id: 'A', name: 'A', hex: '#ff0000' }]);
+    for (const x0 of [0, 3, 6]) for (let y = 0; y < 2; y++) for (let x = x0; x < x0 + 2; x++) g.cells[y * 8 + x] = 0;
+    const out = arrangeMotif(g);
+    expect(out.w).toBe(2);
+    expect(out.h).toBe(3 * 2 + 2 * 2);
+    expect(arrangeMotif(g, 'asis')).toBe(g);
+  });
+
+  it('keeps an automatic motif within a real scarf width', () => {
+    const wide = createGrid(126, 51, [{ id: 'A', name: 'A', hex: '#ff0000' }]);
+    wide.cells.fill(0);
+    const chart = buildChart(wide, DEFAULT_CHART_OPTIONS);
+    expect((chart.w * 10) / DEFAULT_CHART_OPTIONS.gaugeSts).toBeLessThanOrEqual(36);
   });
 });

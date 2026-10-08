@@ -322,3 +322,9 @@ button.link { border: none; background: none; color: var(--accent); font-weight:
 
 /* Frosted glass only over a photo background — elsewhere it's invisible but costly to paint. */
 :root[data-bg='image'] .panel, :root[data-bg='image'] .header { backdrop-filter: blur(12px); }
+.playground { display: flex; flex-direction: column; gap: 6px; }
+.playground-table {
+  position: relative; width: 100%; border-radius: 12px; overflow: hidden; user-select: none;
+  background: repeating-linear-gradient(90deg, rgba(150,120,90,0.05) 0 2px, transparent 2px 6px), #efe6da;
+}
+.playground-table canvas { display: block; }

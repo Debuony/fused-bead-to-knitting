@@ -68,13 +68,13 @@ export function render(job: RenderJob, channel = 'default'): Promise<Rendered> {
 }
 
 /** Run heavy analysis (auto-crop, auto-pixelize) in the worker so the page stays responsive. */
-export function compute<J extends ComputeJob>(job: J): Promise<ComputeResult<J>> {
+export function compute<J extends ComputeJob>(job: J, channel?: string): Promise<ComputeResult<J>> {
   const run = () => runCompute(job) as ComputeResult<J>;
   const w = getWorker();
   if (!w) return onPage(run);
   const id = nextId++;
   return new Promise((resolve, reject) => {
     pending.set(id, { resolve, reject, run });
-    w.postMessage({ id, channel: `compute-${id}`, compute: job });
+    w.postMessage({ id, channel: channel ?? `compute-${id}`, compute: job });
   });
 }

@@ -1,4 +1,5 @@
 import { autoCrop, autoPixelize } from './auto';
+import { pixelize, type PixelizeOptions } from './pixelize';
 import type { Canvas } from './canvas';
 import type { Grid } from './grid';
 import type { KnitChart } from './knitChart';
@@ -20,10 +21,17 @@ export function runJob(job: RenderJob): Canvas {
 /** Heavy analysis that returns data (not an image). */
 export type ComputeJob =
   | { kind: 'autoCrop'; img: ImageData }
-  | { kind: 'autoPixelize'; img: ImageData; palette?: PaletteColor[] };
+  | { kind: 'autoPixelize'; img: ImageData; palette?: PaletteColor[] }
+  | { kind: 'pixelize'; img: ImageData; opts: PixelizeOptions };
 
-export type ComputeResult<J extends ComputeJob> = J extends { kind: 'autoCrop' } ? ReturnType<typeof autoCrop> : ReturnType<typeof autoPixelize>;
+export type ComputeResult<J extends ComputeJob> = J extends { kind: 'autoCrop' }
+  ? ReturnType<typeof autoCrop>
+  : J extends { kind: 'autoPixelize' }
+    ? ReturnType<typeof autoPixelize>
+    : ReturnType<typeof pixelize>;
 
 export function runCompute(job: ComputeJob): unknown {
-  return job.kind === 'autoCrop' ? autoCrop(job.img) : autoPixelize(job.img, job.palette);
+  if (job.kind === 'autoCrop') return autoCrop(job.img);
+  if (job.kind === 'autoPixelize') return autoPixelize(job.img, job.palette);
+  return pixelize(job.img, job.opts);
 }

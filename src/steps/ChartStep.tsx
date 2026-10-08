@@ -8,7 +8,7 @@ import { renderChart } from '../lib/chartRender';
 import { contrastText } from '../lib/color';
 import { downloadCanvas, exportChartPdf } from '../lib/export';
 import {
-  MAIN_YARNS, autoScarfWidth, buildChart, chartSizeCm, motifSection, motifSize, yarnKey, yarnUsage,
+  MAIN_YARNS, arrangeMotif, autoScarfWidth, buildChart, chartSizeCm, motifSection, motifSize, yarnKey, yarnUsage,
   type BorderStyle, type Placement,
 } from '../lib/knitChart';
 import { useProject } from '../store/projectStore';
@@ -48,7 +48,9 @@ export function ChartStep() {
     );
   }
 
-  const { mw, mh } = motifSize(grid, o);
+  const arranged = arrangeMotif(grid, o.motifLayout);
+  const { mw, mh } = motifSize(arranged, o);
+  const isWide = grid.w > grid.h * 1.6;
   const suggested = suggestMainYarns(grid);
   const widthCmNow = (chart.w * 10) / o.gaugeSts;
   const activePreset = SIZE_PRESETS.find((p) => Math.abs(p.w - widthCmNow) < 1.5 && p.l === o.lengthCm)?.id ?? null;
@@ -89,6 +91,13 @@ export function ChartStep() {
             </button>
           ))}
         </div>
+        {isWide && (
+          <Check
+            label={t('chart.stackWide')}
+            checked={o.motifLayout !== 'asis'}
+            onChange={(v) => setChartOptions({ motifLayout: v ? 'auto' : 'asis', motifWidthSts: 0 })}
+          />
+        )}
         <MiniScarf chart={chart} />
         {o.placement !== 'center' && (
           <Slider label={t('chart.spacing')} value={o.spacingRows} min={0} max={60} onChange={(v) => setChartOptions({ spacingRows: v })} />
@@ -104,7 +113,7 @@ export function ChartStep() {
           ))}
         </div>
         <p className="hint">≈ {size.widthCm.toFixed(0)} × {size.lengthCm.toFixed(0)} cm · {t('chart.motifRows', { rows: mh })}</p>
-        <Slider label={t('chart.motifWidth')} value={mw} min={4} max={Math.max(120, grid.w * 3)} onChange={(v) => setChartOptions({ motifWidthSts: v === grid.w ? 0 : v })} format={(v) => `${v} ${t('chart.sts')}`} />
+        <Slider label={t('chart.motifWidth')} value={mw} min={4} max={Math.max(120, arranged.w * 3)} onChange={(v) => setChartOptions({ motifWidthSts: v === arranged.w ? 0 : v })} format={(v) => `${v} ${t('chart.sts')}`} />
         <More title={t('chart.customSize')} open={activePreset === null}>
           <div style={{ display: 'flex', gap: 10 }}>
             <NumberField

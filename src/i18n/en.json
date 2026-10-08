@@ -173,7 +173,8 @@
     "tabChart": "Chart",
     "legendHint": "click a colour or name to change it to the yarn you bought.",
     "customSize": "Custom size",
-    "suggested": "Suggested for your motif"
+    "suggested": "Suggested for your motif",
+    "stackWide": "Stack wide patterns along the scarf"
   },
   "scarf": {
     "title": "Scarf preview",
@@ -215,7 +216,10 @@
     "curlFine": "The edge stitch keeps this scarf flat.",
     "addBorder": "Add an edge →",
     "curlForced": "This is how plain stockinette rolls up without an edge pattern.",
-    "curlFlat": "Shown flat, as if blocked."
+    "curlFlat": "Shown flat, as if blocked.",
+    "play": "Pick it up",
+    "playHint": "Press anywhere on the scarf and drag to pick it up and move it around.",
+    "playReset": "Lay it flat again"
   },
   "settings": {
     "title": "Settings",

@@ -4,6 +4,7 @@ import type { Grid } from './grid';
 import type { KnitChart } from './knitChart';
 import { mulberry32 } from './quantize';
 import { renderScarf, type ScarfRenderOptions } from './scarfRender';
+import { drawStripMesh, pathLength, spline, type Pt } from './stripMesh';
 
 export type MockupScene = 'trench' | 'y2k' | 'giftbox' | 'flatlay';
 export const MOCKUP_SCENES: MockupScene[] = ['trench', 'y2k', 'giftbox', 'flatlay'];
@@ -38,7 +39,6 @@ export const hasAvatar = (s: MockupScene) => s === 'trench' || s === 'y2k';
 const W = 900;
 const H = 1125; // 4:5, good for social posts
 
-type Pt = { x: number; y: number };
 
 /** The knitted scarf as a vertical texture, plus the source rectangle that holds it. */
 interface ScarfTexture {
@@ -48,37 +48,17 @@ interface ScarfTexture {
   /** First and last row (px) including fringe. */
   y0: number;
   y1: number;
+  /** Margin around the fabric, as a fraction of sw. */
+  inset: number;
 }
 
 function scarfTexture(chart: KnitChart, scarf: ScarfRenderOptions): ScarfTexture {
   const stitchPx = 4;
   const img = renderScarf(chart, { ...scarf, stitchPx, orientation: 'vertical', drape: false, shadow: false });
   const m = stitchPx * 4;
-  return { img, sx: m / 2, sw: img.width - m, y0: m, y1: img.height - m };
-}
-
-/** Smooth Catmull-Rom curve through control points, sampled densely. */
-function spline(ctrl: Pt[], per = 40): Pt[] {
-  if (ctrl.length === 2) return [ctrl[0], ctrl[1]];
-  const out: Pt[] = [];
-  const p = [ctrl[0], ...ctrl, ctrl[ctrl.length - 1]];
-  for (let i = 1; i < p.length - 2; i++)
-    for (let k = 0; k < per; k++) {
-      const t = k / per;
-      const t2 = t * t;
-      const t3 = t2 * t;
-      const f = (a: number, b: number, c: number, d: number) =>
-        0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
-      out.push({ x: f(p[i - 1].x, p[i].x, p[i + 1].x, p[i + 2].x), y: f(p[i - 1].y, p[i].y, p[i + 1].y, p[i + 2].y) });
-    }
-  out.push(ctrl[ctrl.length - 1]);
-  return out;
-}
-
-function pathLength(pts: Pt[]) {
-  let L = 0;
-  for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
-  return L;
+  const sw = img.width - m;
+  // The fabric sits inside a margin of m on each side of the texture.
+  return { img, sx: m / 2, sw, y0: m, y1: img.height - m, inset: m / 2 / sw };
 }
 
 /**
@@ -102,28 +82,8 @@ function drawStrip(ctx: Ctx2D, tex: ScarfTexture, from: number, to: number, ctrl
     ctx.drawImage(tex.img, tex.sx, Math.min(from, to), tex.sw, Math.abs(to - from), -width / 2, 0, width, L);
     ctx.restore();
   } else {
-    let seg = 0;
-    let segStart = 0;
-    const slice = Math.abs(to - from) / L;
-    for (let s = 0; s < L; s += 1) {
-      while (seg < pts.length - 2) {
-        const len = Math.hypot(pts[seg + 1].x - pts[seg].x, pts[seg + 1].y - pts[seg].y);
-        if (segStart + len >= s) break;
-        segStart += len;
-        seg++;
-      }
-      const a = pts[seg];
-      const b = pts[seg + 1] ?? a;
-      const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
-      const f = Math.min(1, (s - segStart) / len);
-      const sy = from + (to - from) * (s / L);
-      const srcY = Math.max(0, Math.min(tex.img.height - 1, Math.min(sy, sy + (to > from ? slice : -slice))));
-      ctx.save();
-      ctx.translate(a.x + (b.x - a.x) * f, a.y + (b.y - a.y) * f);
-      ctx.rotate(Math.atan2(b.y - a.y, b.x - a.x) - Math.PI / 2);
-      ctx.drawImage(tex.img, tex.sx, srcY, tex.sw, Math.max(1, slice * 2), -width / 2, 0, width, 2.4);
-      ctx.restore();
-    }
+    // Curved bands: one continuous textured mesh, so stitches flow through bends.
+    drawStripMesh(ctx, tex, from, to, pts, width, { creases: shading });
   }
   if (!shading) return;
   // Soft cylindrical shading so the band reads as a rounded, padded scarf.
@@ -131,7 +91,7 @@ function drawStrip(ctx: Ctx2D, tex: ScarfTexture, from: number, to: number, ctrl
   ctx.globalCompositeOperation = 'source-atop';
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  ctx.strokeStyle = 'rgba(60,40,30,0.16)';
+  ctx.strokeStyle = 'rgba(60,40,30,0.10)';
   ctx.lineWidth = width;
   stroke(ctx, pts);
   ctx.strokeStyle = 'rgba(255,255,255,0.10)';

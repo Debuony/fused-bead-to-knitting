@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { More } from '../components/ActionRail';
 import { Check, Seg, Slider } from '../components/Field';
 import { KnittingMachine } from '../components/KnittingMachine';
+import { ScarfPlayground } from '../components/ScarfPlayground';
 import { downloadCanvas } from '../lib/export';
 import { buildChart, chartSizeCm, type KnitChart } from '../lib/knitChart';
 import { HAIR_COLORS, HAIR_STYLES, MOCKUP_SCENES, SKIN_TONES, hasAvatar, type MockupScene } from '../lib/mockup';
@@ -25,7 +26,8 @@ export function ScarfStep() {
   const { t } = useTranslation();
   const { grid, chartOptions, scarfOptions: o, setScarfOptions, mockupOptions: m, setMockupOptions, goTo } = useProject();
   const [view, setView] = useState<View>('machine');
-  const [fit, setFit] = useState(true);
+  const [finalMode, setFinalMode] = useState<'fit' | 'zoom' | 'play'>('fit');
+  const fit = finalMode !== 'zoom';
   const [scene, setScene] = useState<MockupScene>('trench');
   const [busy, setBusy] = useState(false);
   const holder = useRef<HTMLDivElement>(null);
@@ -38,7 +40,7 @@ export function ScarfStep() {
   // Finished scarf and mockups render in a background worker, then appear in the holder.
   const token = useRef(0);
   useEffect(() => {
-    if (!chart || !grid || !holder.current || view === 'machine') return;
+    if (!chart || !grid || !holder.current || view === 'machine' || (view === 'final' && finalMode === 'play')) return;
     const my = ++token.current;
     setBusy(true);
     const id = window.setTimeout(async () => {
@@ -72,7 +74,7 @@ export function ScarfStep() {
       }
     }, 160); // debounced: sliders and typing don't re-render on every tick
     return () => window.clearTimeout(id);
-  }, [chart, grid, o, fit, view, scene, m, message]);
+  }, [chart, grid, o, fit, view, scene, m, message, finalMode]);
 
   if (!chart || !grid) {
     return (
@@ -114,8 +116,16 @@ export function ScarfStep() {
           />
           {view === 'final' && (
             <>
-              <Seg value={fit ? 'fit' : 'zoom'} onChange={(v) => setFit(v === 'fit')} options={[{ value: 'fit', label: t('scarf.fit') }, { value: 'zoom', label: t('scarf.closeUp') }]} />
-              <Seg value={o.orientation} onChange={(v) => setScarfOptions({ orientation: v })} options={[{ value: 'horizontal', label: t('scarf.horizontal') }, { value: 'vertical', label: t('scarf.vertical') }]} />
+              <Seg
+                value={finalMode}
+                onChange={setFinalMode}
+                options={[
+                  { value: 'fit', label: t('scarf.fit') },
+                  { value: 'zoom', label: t('scarf.closeUp') },
+                  { value: 'play', label: `🖐 ${t('scarf.play')}` },
+                ]}
+              />
+              {finalMode !== 'play' && <Seg value={o.orientation} onChange={(v) => setScarfOptions({ orientation: v })} options={[{ value: 'horizontal', label: t('scarf.horizontal') }, { value: 'vertical', label: t('scarf.vertical') }]} />}
             </>
           )}
           {view !== 'machine' && <span className="hint">{busy ? `🧶 ${t('scarf.knitting')}` : `${size.widthCm.toFixed(0)} × ${size.lengthCm.toFixed(0)} cm`}</span>}
@@ -132,6 +142,8 @@ export function ScarfStep() {
         )}
         {view === 'machine' ? (
           <KnittingMachine chart={chart} options={o} onJump={() => setView('final')} />
+        ) : view === 'final' && finalMode === 'play' ? (
+          <ScarfPlayground chart={chart} options={o} />
         ) : (
           <div className={`stage center ${busy ? 'busy' : ''}`} ref={holder} style={{ background: 'transparent', maxHeight: fit || view === 'mockup' ? undefined : '75vh', minHeight: 360 }} />
         )}

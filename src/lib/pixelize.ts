@@ -188,12 +188,8 @@ export function pixelize(img: ImageLike, opts: PixelizeOptions): Grid {
   return compactGrid({ w, h, cells, colors });
 }
 
-/**
- * Estimate how many beads span the image by finding the dominant period of the
- * brightness profile (beads have holes/gaps that repeat regularly).
- * Returns null when no clear period is found.
- */
-export function detectGridCount(img: ImageLike, axis: 'x' | 'y'): number | null {
+/** Brightness profile along one axis (sampling every 2nd pixel across), as first differences. */
+function edgeProfile(img: ImageLike, axis: 'x' | 'y'): number[] {
   const len = axis === 'x' ? img.width : img.height;
   const other = axis === 'x' ? img.height : img.width;
   const profile = new Array(len).fill(0);
@@ -207,25 +203,116 @@ export function detectGridCount(img: ImageLike, axis: 'x' | 'y'): number | null 
     }
     profile[a] = sum;
   }
-  // Detrend with a moving average so slow lighting changes don't dominate.
-  const win = Math.max(3, Math.round(len / 10));
-  const detr = profile.map((_, i) => {
-    let s = 0;
-    let n = 0;
-    for (let j = Math.max(0, i - win); j <= Math.min(len - 1, i + win); j++) { s += profile[j]; n++; }
-    return profile[i] - s / n;
+  // First differences: bead edges and holes stand out, large shapes (whole pieces) fade.
+  return profile.slice(1).map((v, i) => v - profile[i]);
+}
+
+/** Spectral power of `d` at each candidate period, normalised so the strongest is 1. */
+function periodPower(d: number[], periods: number[]): number[] {
+  const n = d.length;
+  const pw = periods.map((p) => {
+    let re = 0;
+    let im = 0;
+    const w = (2 * Math.PI) / p;
+    for (let i = 0; i < n; i++) {
+      re += d[i] * Math.cos(w * i);
+      im += d[i] * Math.sin(w * i);
+    }
+    return (re * re + im * im) / n;
   });
-  const minP = Math.max(3, Math.floor(len / 120));
-  const maxP = Math.floor(len / 5);
-  let bestP = 0;
-  let bestScore = 0;
-  const energy = detr.reduce((s, v) => s + v * v, 0) || 1;
-  for (let p = minP; p <= maxP; p++) {
-    let s = 0;
-    for (let i = 0; i + p < len; i++) s += detr[i] * detr[i + p];
-    const score = s / energy;
-    if (score > bestScore) { bestScore = score; bestP = p; }
+  const max = Math.max(...pw) || 1;
+  return pw.map((v) => v / max);
+}
+
+/**
+ * Bead pitch in px. Beads are square, so one pitch must explain the texture in
+ * both directions: we add up the spectra of both axes. A bead's hole, highlight and
+ * the gaps between beads repeat 2–4× per bead, so the strongest period is often a
+ * fraction of the bead. Like pitch detection in audio, we use a harmonic sum: the
+ * bead size P is the period whose "overtones" P/2, P/3, P/4 are also strong and
+ * which itself carries energy.
+ */
+export function detectPitch(img: ImageLike): number | null {
+  const shortSide = Math.min(img.width, img.height);
+  const maxP = Math.max(5, shortSide / 2.5);
+  const periods: number[] = [];
+  for (let p = 3; p <= maxP; p += p < 20 ? 0.2 : 0.5) periods.push(p);
+  if (periods.length < 3) return null;
+  const px = periodPower(edgeProfile(img, 'x'), periods);
+  const py = periodPower(edgeProfile(img, 'y'), periods);
+  const score = periods.map((_, i) => (px[i] + py[i]) / 2);
+  const at = (p: number) => {
+    if (p < periods[0]) return 0;
+    let k = 0;
+    while (k < periods.length - 1 && periods[k + 1] <= p) k++;
+    // Peaks are narrow; look at a small neighbourhood.
+    return Math.max(score[k], score[Math.max(0, k - 1)], score[Math.min(periods.length - 1, k + 1)]);
+  };
+  let best = -1;
+  let bestSum = 0;
+  periods.forEach((P, i) => {
+    if (P < 4 || score[i] < 0.12) return; // the bead size itself must show up
+    // Only count overtones above the shortest period we can see.
+    let sum = 0;
+    for (let n = 1; n <= 4; n++) sum += at(P / n);
+    if (sum > bestSum * 1.02) {
+      bestSum = sum;
+      best = i;
+    }
+  });
+  if (best < 0 || bestSum < 0.6) return null;
+  let pitch = periods[best];
+  // When the true bead size barely shows in the spectrum (tiny beads, soft photos),
+  // the winner can still be half a bead: cells then split every bead in two, which
+  // shows up as colour changes at only every other cell boundary.
+  // (Only with enough beads to judge: the doubled grid must still be ≥ 5 beads across.)
+  if (pitch * 2 <= Math.max(maxP, pitch) && shortSide / (pitch * 2) >= 5) {
+    const half = splitEvidence(img, pitch);
+    if (half > 0.9 && half > 1.4 * splitEvidence(img, pitch * 2)) pitch *= 2;
   }
-  if (!bestP || bestScore < 0.15) return null;
-  return Math.round(len / bestP);
+  return pitch;
+}
+
+/**
+ * "Split evidence" for cells of `pitch` px. If a cell is only part of a bead, colour
+ * changes happen at just some cell boundaries (between beads, never inside one), so
+ * the per-boundary totals alternate high/low. Measured locally, so a slightly-off
+ * pitch drifting in and out of phase doesn't cancel it. Lowest at the true bead size.
+ */
+function splitEvidence(img: ImageLike, pitch: number): number {
+  const gw = Math.max(3, Math.round(img.width / pitch));
+  const gh = Math.max(3, Math.round(img.height / pitch));
+  const cells = sampleCells(img, gw, gh, 0.5);
+  const dist = (a: RGB, b: RGB) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]);
+  const D = new Array(gw - 1).fill(0);
+  const E = new Array(gh - 1).fill(0);
+  for (let y = 0; y < gh; y++)
+    for (let x = 0; x < gw; x++) {
+      const a = cells[y * gw + x];
+      if (!a) continue;
+      const r = x + 1 < gw ? cells[y * gw + x + 1] : null;
+      const d = y + 1 < gh ? cells[(y + 1) * gw + x] : null;
+      if (r) D[x] += dist(a, r);
+      if (d) E[y] += dist(a, d);
+    }
+  const alternation = (v: number[]) => {
+    let num = 0;
+    let den = 0;
+    for (let i = 1; i + 1 < v.length; i++) {
+      num += Math.abs(v[i] - (v[i - 1] + v[i + 1]) / 2);
+      den += v[i];
+    }
+    return den ? num / den : 0;
+  };
+  const wD = D.reduce((a, b) => a + b, 0);
+  const wE = E.reduce((a, b) => a + b, 0);
+  return (alternation(D) * wD + alternation(E) * wE) / (wD + wE || 1) / 0.4;
+}
+
+
+/** How many beads span the image along one axis (null when no clear bead texture). */
+export function detectGridCount(img: ImageLike, axis: 'x' | 'y'): number | null {
+  const pitch = detectPitch(img);
+  if (!pitch) return null;
+  return Math.max(1, Math.round((axis === 'x' ? img.width : img.height) / pitch));
 }

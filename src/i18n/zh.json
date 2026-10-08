@@ -173,7 +173,8 @@
     "tabChart": "花卡",
     "legendHint": "点颜色或名字，可以改成你实际买到的毛线。",
     "customSize": "自定义尺寸",
-    "suggested": "适合你图案的推荐"
+    "suggested": "适合你图案的推荐",
+    "stackWide": "宽图案自动竖着排（沿围巾方向）"
   },
   "scarf": {
     "title": "围巾预览",
@@ -215,7 +216,10 @@
     "curlFine": "边缘花样让这条围巾保持平整。",
     "addBorder": "去加个边缘 →",
     "curlForced": "没有边缘花样的平针，就会这样卷起来。",
-    "curlFlat": "平整展示（像定型后的样子）。"
+    "curlFlat": "平整展示（像定型后的样子）。",
+    "play": "拿起来玩",
+    "playHint": "按住围巾任意位置拖动，就能把它拎起来、挪来挪去。",
+    "playReset": "重新铺平"
   },
   "settings": {
     "title": "设置",

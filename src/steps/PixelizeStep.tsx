@@ -11,7 +11,7 @@ import { rgbToHex } from '../lib/color';
 import { countColors, type Grid } from '../lib/grid';
 import { canvasImageData, workingImage } from '../lib/imageUtils';
 import { CUSTOM_PREFIX, getPalette } from '../lib/palettes';
-import { pixelize, sampleCells } from '../lib/pixelize';
+import { sampleCells } from '../lib/pixelize';
 import { kmeans } from '../lib/quantize';
 import { useProject } from '../store/projectStore';
 import { useSettings } from '../store/settingsStore';
@@ -42,10 +42,15 @@ export function PixelizeStep() {
     if (!cropped) return;
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => {
-      setPreview(pixelize(cropped.data, {
-        gridW: o.gridW, gridH: o.gridH, palette, maxColors: o.maxColors,
-        removeBackground: o.removeBg, bgTolerance: o.bgTol, removeEnclosed: o.removeEnclosed, sampleRatio: o.sample,
-      }));
+      // Runs in the background worker; only the newest settings are processed.
+      compute({
+        kind: 'pixelize',
+        img: cropped.data,
+        opts: {
+          gridW: o.gridW, gridH: o.gridH, palette, maxColors: o.maxColors,
+          removeBackground: o.removeBg, bgTolerance: o.bgTol, removeEnclosed: o.removeEnclosed, sampleRatio: o.sample,
+        },
+      }, 'pixelize-preview').then(setPreview, () => {});
     }, 120);
     return () => window.clearTimeout(timer.current);
   }, [cropped, o, palette]);
