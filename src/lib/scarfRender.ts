@@ -483,18 +483,27 @@ export function renderScarf(source: KnitChart, opts: ScarfRenderOptions): Canvas
 
 /**
  * Quarter-size soft silhouette of `src` in one colour (for shadows and halos).
- * Uses the canvas shadow trick — draw the image off-canvas and keep only its
- * blurred shadow — which works in every browser (ctx.filter doesn't in Safari).
+ * Blurred by shrinking and scaling back up with smoothing, then tinted — no
+ * ctx.filter (missing in Safari) and no off-canvas shadow tricks (browsers
+ * disagree on those, which could show stray copies of the scarf).
  */
 function softCopy(src: Canvas, blurPx: number, color: string): Canvas {
-  const k = 4;
-  const c = makeCanvas(src.width / k, src.height / k);
-  const ctx = ctx2d(c);
-  ctx.shadowColor = color;
-  ctx.shadowBlur = Math.max(1, blurPx / k);
-  ctx.shadowOffsetX = c.width + 10;
-  ctx.drawImage(src, -c.width - 10, 0, c.width, c.height);
-  return c;
+  const quarter = makeCanvas(src.width / 4, src.height / 4);
+  // Shrink further the more blur we want, then scale back up: a cheap, even blur.
+  const k = Math.max(1, Math.min(6, Math.round(blurPx / 4)));
+  const tiny = makeCanvas(quarter.width / k, quarter.height / k);
+  const tctx = ctx2d(tiny);
+  tctx.imageSmoothingEnabled = true;
+  tctx.imageSmoothingQuality = 'high';
+  tctx.drawImage(src, 0, 0, tiny.width, tiny.height);
+  const qctx = ctx2d(quarter);
+  qctx.imageSmoothingEnabled = true;
+  qctx.imageSmoothingQuality = 'high';
+  qctx.drawImage(tiny, 0, 0, quarter.width, quarter.height);
+  qctx.globalCompositeOperation = 'source-in';
+  qctx.fillStyle = color;
+  qctx.fillRect(0, 0, quarter.width, quarter.height);
+  return quarter;
 }
 
 function renderScarfUncached(source: KnitChart, opts: ScarfRenderOptions): Canvas {
