@@ -319,9 +319,7 @@
     "fontSize": "文字大小",
     "font": {
       "rounded": "圆体",
-      "hand": "手写楷体",
       "serif": "宋体",
-      "sans": "黑体",
       "cursive": "英文花体",
       "comic": "Comic 漫画体",
       "typewriter": "打字机",
@@ -351,6 +349,7 @@
     "iterationsHint": "每帧计算次数。越多越硬挺，稍慢。",
     "copy": "复制参数",
     "copied": "已复制！",
-    "reset": "恢复默认"
+    "reset": "恢复默认",
+    "sausageNote": "卷成腊肠时，硬挺度自动设为 0。"
   }
 }

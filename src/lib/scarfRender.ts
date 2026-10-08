@@ -361,13 +361,14 @@ function blit(dst: Uint8ClampedArray, W: number, H: number, s: ImageData, dx: nu
 }
 
 /**
- * Fringe at one end. `curl` (0–1) is how much the scarf rolls: the fringe then
- * gathers into the tube's width and each strand curls inwards — towards the
- * middle and, near the edges, back over itself, like yarn that wants to roll too.
+ * Fringe at one end. `curl` (0–1) is how much the scarf rolls: the fringe's
+ * attachment then follows the rolled edge (gathered to the tube's width, the
+ * outer tassels tucked slightly round the roll), while the strands below it
+ * simply hang and drape on their own.
  */
 function drawFringe(ctx: Ctx2D, chart: KnitChart, opts: ScarfRenderOptions, offsetX: number, edgeY: number, dir: 1 | -1, row: number, curl = 0) {
   const w = opts.stitchPx;
-  const len = w * 10 * (1 - 0.25 * curl);
+  const len = w * 10;
   const rand = mulberry32((opts.seed ?? 1) + (dir > 0 ? 11 : 23));
   const group = 3;
   const mid = (chart.w * w) / 2;
@@ -377,30 +378,32 @@ function drawFringe(ctx: Ctx2D, chart: KnitChart, opts: ScarfRenderOptions, offs
     const hex = chart.yarns[chart.cells[row * chart.w + Math.min(chart.w - 1, x + 1)]].hex;
     const rel = ((x + group / 2) * w - mid) / mid; // -1 (left edge) … 1 (right edge)
     const cx = offsetX + mid + rel * mid * squeeze;
+    // Tassels at the sides of the roll sit on its curved back, slightly further in and darker.
+    const tuck = curl * Math.abs(rel) ** 3;
+    const ky = edgeY + dir * w * (0.6 - tuck * 0.8);
     const strands = 7;
     for (let s = 0; s < strands; s++) {
-      const sx = cx + (s - strands / 2) * w * 0.18 * (1 - 0.5 * curl);
       const l = len * (0.85 + rand() * 0.25);
-      const sway = (rand() - 0.5) * w * 1.4 * (1 - curl);
-      // Curl: strands sweep towards the middle; outer ones hook back on themselves.
-      const inward = -rel * curl * mid * squeeze * 0.75;
-      const hook = Math.abs(rel) * curl * l * 0.45;
-      ctx.strokeStyle = shade(hex, (rand() - 0.5) * 0.25 - curl * 0.12 * Math.abs(rel));
+      const sway = (rand() - 0.5) * w * 1.4;
+      // Each strand hangs from the knot and loosens slightly as it falls — no gathering at the tips.
+      const spread = (s - (strands - 1) / 2) * w * 0.18;
+      const relax = rel * curl * mid * (1 - squeeze) * 0.35; // ease back towards the flat width as it hangs
+      ctx.strokeStyle = shade(hex, (rand() - 0.5) * 0.25 - tuck * 0.25);
       ctx.lineWidth = Math.max(1, w * 0.22 * opts.thickness);
       ctx.lineCap = 'round';
       ctx.beginPath();
-      ctx.moveTo(cx, edgeY + dir * w * 0.6);
+      ctx.moveTo(cx, ky);
       ctx.bezierCurveTo(
-        sx + inward * 0.2, edgeY + dir * l * 0.35,
-        sx + sway + inward * 0.9, edgeY + dir * (l * 0.75),
-        sx + sway * 1.4 + inward, edgeY + dir * (l - hook),
+        cx + spread * 0.6, ky + dir * l * 0.3,
+        cx + spread + sway * 0.6 + relax * 0.5, ky + dir * l * 0.65,
+        cx + spread * 1.2 + sway + relax, ky + dir * l,
       );
       ctx.stroke();
     }
     // Knot.
-    ctx.fillStyle = shade(hex, -0.15);
+    ctx.fillStyle = shade(hex, -0.15 - tuck * 0.2);
     ctx.beginPath();
-    ctx.ellipse(cx, edgeY + dir * w * 0.8, w * 0.55 * (1 - 0.3 * curl), w * 0.42, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, ky + dir * w * 0.2, w * 0.55 * (1 - 0.3 * curl), w * 0.42, 0, 0, Math.PI * 2);
     ctx.fill();
   }
 }

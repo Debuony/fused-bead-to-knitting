@@ -27,15 +27,13 @@ export interface MockupOptions {
   messageSize: number;
 }
 
-export type MessageFont = 'rounded' | 'hand' | 'serif' | 'sans' | 'cursive' | 'comic' | 'typewriter' | 'marker';
-export const MESSAGE_FONTS: MessageFont[] = ['rounded', 'hand', 'serif', 'sans', 'cursive', 'comic', 'typewriter', 'marker'];
+export type MessageFont = 'rounded' | 'serif' | 'cursive' | 'comic' | 'typewriter' | 'marker';
+export const MESSAGE_FONTS: MessageFont[] = ['rounded', 'serif', 'cursive', 'comic', 'typewriter', 'marker'];
 
 /** System fonts only (also usable inside the render worker), with Chinese coverage on Mac and Windows. */
 export const FONT_STACKS: Record<MessageFont, { family: string; weight: number }> = {
   rounded: { family: '"Yuanti SC", "Hiragino Maru Gothic ProN", "Arial Rounded MT Bold", "Microsoft YaHei", sans-serif', weight: 600 },
-  hand: { family: '"Kaiti SC", "STKaiti", "KaiTi", "Bradley Hand", "Segoe Print", cursive', weight: 500 },
   serif: { family: '"Songti SC", "STSong", "SimSun", Georgia, "Times New Roman", serif', weight: 500 },
-  sans: { family: '"PingFang SC", "Microsoft YaHei", "Helvetica Neue", system-ui, sans-serif', weight: 600 },
   // English-style fonts; Chinese characters fall back to a matching Chinese face.
   cursive: { family: '"Snell Roundhand", "Apple Chancery", "Brush Script MT", "Segoe Script", "Kaiti SC", "KaiTi", cursive', weight: 500 },
   comic: { family: '"Comic Sans MS", "Chalkboard SE", "Comic Neue", "Yuanti SC", "Microsoft YaHei", cursive', weight: 600 },
@@ -44,7 +42,7 @@ export const FONT_STACKS: Record<MessageFont, { family: string; weight: number }
 };
 
 function messageFont(m: MessageFont, px: number) {
-  const f = FONT_STACKS[m] ?? FONT_STACKS.sans;
+  const f = FONT_STACKS[m] ?? FONT_STACKS.rounded;
   return `${f.weight} ${Math.round(px)}px ${f.family}`;
 }
 

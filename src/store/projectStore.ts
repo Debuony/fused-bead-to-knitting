@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { Grid } from '../lib/grid';
 import { FULL_CROP, type CropRect } from '../lib/imageUtils';
 import { DEFAULT_CHART_OPTIONS, type ChartOptions } from '../lib/knitChart';
-import { DEFAULT_MOCKUP_OPTIONS, type MockupOptions } from '../lib/mockup';
+import { DEFAULT_MOCKUP_OPTIONS, MESSAGE_FONTS, type MessageFont, type MockupOptions } from '../lib/mockup';
 import { DEFAULT_SCARF_OPTIONS, type ScarfRenderOptions } from '../lib/scarfRender';
 import { useSettings } from './settingsStore';
 
@@ -132,7 +132,14 @@ export const useProject = create<ProjectState>()(
           // Fill in options added in later versions.
           chartOptions: { ...DEFAULT_CHART_OPTIONS, ...p.chartOptions },
           scarfOptions: { ...DEFAULT_SCARF_OPTIONS, ...p.scarfOptions },
-          mockupOptions: { ...DEFAULT_MOCKUP_OPTIONS, ...p.mockupOptions },
+          mockupOptions: {
+            ...DEFAULT_MOCKUP_OPTIONS,
+            ...p.mockupOptions,
+            // Fonts that were removed fall back to the default.
+            messageFont: MESSAGE_FONTS.includes(p.mockupOptions?.messageFont as MessageFont)
+              ? (p.mockupOptions!.messageFont as MessageFont)
+              : DEFAULT_MOCKUP_OPTIONS.messageFont,
+          },
         };
         // Without a photo or grid, earlier steps can't be resumed.
         if (!merged.grid) return { ...merged, step: 0, maxStep: 0 };

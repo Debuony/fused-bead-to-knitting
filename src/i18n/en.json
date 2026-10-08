@@ -319,9 +319,7 @@
     "fontSize": "Text size",
     "font": {
       "rounded": "Rounded",
-      "hand": "Handwritten",
       "serif": "Serif",
-      "sans": "Clean",
       "cursive": "Cursive",
       "comic": "Comic",
       "typewriter": "Typewriter",
@@ -351,6 +349,7 @@
     "iterationsHint": "Solver passes per frame. More = stiffer, a bit slower.",
     "copy": "Copy values",
     "copied": "Copied!",
-    "reset": "Defaults"
+    "reset": "Defaults",
+    "sausageNote": "Rolled into a sausage: stiffness is 0 while it stays rolled."
   }
 }

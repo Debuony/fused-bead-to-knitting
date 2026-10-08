@@ -3,7 +3,7 @@ import { Slider } from './Field';
 import { useTranslation } from 'react-i18next';
 import type { KnitChart } from '../lib/knitChart';
 import { render, type Rendered } from '../lib/renderClient';
-import type { ScarfRenderOptions } from '../lib/scarfRender';
+import { effectiveCurl, type ScarfRenderOptions } from '../lib/scarfRender';
 import { drawStripMesh, spline, type Pt, type StripTexture } from '../lib/stripMesh';
 
 interface Props {
@@ -88,8 +88,10 @@ export function ScarfPlayground({ chart, options }: Props) {
   const [tex, setTex] = useState<{ t: StripTexture; y0: number; y1: number } | null>(null);
   const [layoutKey, setLayoutKey] = useState(0);
   const [physics, setPhysics] = useState<Physics>(loadPhysics);
+  // A rolled-up (sausage) scarf is a soft tube: no bending stiffness.
+  const sausage = effectiveCurl(chart, options) > 0.5;
   const phys = useRef(physics);
-  phys.current = physics;
+  phys.current = sausage ? { ...physics, stiffness: 0 } : physics;
   const [copied, setCopied] = useState(false);
   const updatePhysics = (patch: Partial<Physics>) =>
     setPhysics((p) => {
@@ -331,6 +333,7 @@ export function ScarfPlayground({ chart, options }: Props) {
         <summary>🔧 {t('physics.title')}</summary>
         <div className="more-body">
           <p className="hint">{t('physics.hint')}</p>
+          {sausage && <p className="hint">🌭 {t('physics.sausageNote')}</p>}
           <div className="tuning-grid">
             {(Object.keys(PHYSICS_RANGES) as (keyof Physics)[]).map((k) => {
               const [min, max, stepV] = PHYSICS_RANGES[k];
@@ -338,7 +341,7 @@ export function ScarfPlayground({ chart, options }: Props) {
                 <Slider
                   key={k}
                   label={<span title={t(`physics.${k}Hint`)}>{t(`physics.${k}`)}</span>}
-                  value={physics[k]}
+                  value={sausage && k === 'stiffness' ? 0 : physics[k]}
                   min={min}
                   max={max}
                   step={stepV}
