@@ -6,7 +6,7 @@ import { KnittingMachine } from '../components/KnittingMachine';
 import { ScarfPlayground } from '../components/ScarfPlayground';
 import { downloadCanvas } from '../lib/export';
 import { buildChart, chartSizeCm, type KnitChart } from '../lib/knitChart';
-import { HAIR_COLORS, HAIR_STYLES, MOCKUP_SCENES, SKIN_TONES, hasAvatar, type MockupScene } from '../lib/mockup';
+import { HAIR_COLORS, HAIR_STYLES, MESSAGE_FONTS, MOCKUP_SCENES, SKIN_TONES, hasAvatar, type MessageFont, type MockupScene } from '../lib/mockup';
 import { toPageCanvas } from '../lib/canvas';
 import { render } from '../lib/renderClient';
 import type { RenderJob } from '../lib/renderJobs';
@@ -259,6 +259,24 @@ export function ScarfStep() {
                 maxLength={40}
                 onChange={(e) => setMockupOptions({ message: e.target.value })}
               />
+            )}
+            {m.showMessage && (
+              <>
+                <Seg<MessageFont>
+                  value={m.messageFont}
+                  onChange={(v) => setMockupOptions({ messageFont: v })}
+                  options={MESSAGE_FONTS.map((f) => ({ value: f, label: t(`mockup.font.${f}`) }))}
+                />
+                <Slider
+                  label={t('mockup.fontSize')}
+                  value={m.messageSize}
+                  min={0.7}
+                  max={1.6}
+                  step={0.05}
+                  onChange={(v) => setMockupOptions({ messageSize: v })}
+                  format={(v) => `${Math.round(v * 100)}%`}
+                />
+              </>
             )}
             <Check label={`🟥 ${t('mockup.showBeads')}`} checked={m.showBeads} onChange={(v) => setMockupOptions({ showBeads: v })} />
           </>

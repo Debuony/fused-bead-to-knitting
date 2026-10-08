@@ -315,6 +315,38 @@
       "buns": "Space buns",
       "curly": "Curly",
       "pixie": "Pixie"
+    },
+    "fontSize": "Text size",
+    "font": {
+      "rounded": "Rounded",
+      "hand": "Handwritten",
+      "serif": "Serif",
+      "sans": "Clean"
     }
+  },
+  "physics": {
+    "title": "Tune how it feels",
+    "hint": "Drag the scarf while adjusting — changes apply instantly and are remembered. Copy the values and send them over to make them the default.",
+    "handSpan": "Grab area",
+    "handSpanHint": "How much of the scarf your hand holds. Bigger = more of it moves together.",
+    "hold": "Grip",
+    "holdHint": "How firmly the held area follows your hand.",
+    "follow": "Responsiveness",
+    "followHint": "How fast the scarf catches up with the cursor. Lower = calmer.",
+    "stiffness": "Stiffness",
+    "stiffnessHint": "How much the fabric resists bending.",
+    "tableDamping": "Glide on table",
+    "tableDampingHint": "Higher = keeps sliding after you let go; lower = more friction.",
+    "airDamping": "Swing in the air",
+    "airDampingHint": "How freely the lifted part swings.",
+    "smoothing": "Smooth curves",
+    "smoothingHint": "Evens out wiggles along the scarf.",
+    "liftHeight": "Lift height",
+    "liftHeightHint": "How high the held part rises off the table.",
+    "iterations": "Precision",
+    "iterationsHint": "Solver passes per frame. More = stiffer, a bit slower.",
+    "copy": "Copy values",
+    "copied": "Copied!",
+    "reset": "Defaults"
   }
 }

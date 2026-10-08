@@ -315,6 +315,38 @@
       "buns": "丸子头",
       "curly": "卷发",
       "pixie": "精灵短发"
+    },
+    "fontSize": "文字大小",
+    "font": {
+      "rounded": "圆体",
+      "hand": "手写楷体",
+      "serif": "宋体",
+      "sans": "黑体"
     }
+  },
+  "physics": {
+    "title": "调手感",
+    "hint": "一边拖动围巾一边调，改动立即生效并会被记住。复制参数发给我，就可以设成默认值。",
+    "handSpan": "抓取范围",
+    "handSpanHint": "手抓住的围巾长度。越大，越多部分一起移动。",
+    "hold": "抓握力度",
+    "holdHint": "被抓住的部分跟手的紧密程度。",
+    "follow": "跟手速度",
+    "followHint": "围巾追上鼠标的速度。越低越平稳、越不敏感。",
+    "stiffness": "硬挺度",
+    "stiffnessHint": "面料抵抗弯折的程度。",
+    "tableDamping": "桌面滑动",
+    "tableDampingHint": "越高，松手后滑得越远；越低，摩擦越大。",
+    "airDamping": "空中摆动",
+    "airDampingHint": "拎起部分摆动的自由程度。",
+    "smoothing": "曲线平滑",
+    "smoothingHint": "让围巾的弯曲更均匀。",
+    "liftHeight": "拎起高度",
+    "liftHeightHint": "被抓住的部分离开桌面的高度。",
+    "iterations": "计算精度",
+    "iterationsHint": "每帧计算次数。越多越硬挺，稍慢。",
+    "copy": "复制参数",
+    "copied": "已复制！",
+    "reset": "恢复默认"
   }
 }

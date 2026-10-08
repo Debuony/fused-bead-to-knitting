@@ -359,32 +359,47 @@ function blit(dst: Uint8ClampedArray, W: number, H: number, s: ImageData, dx: nu
   }
 }
 
-function drawFringe(ctx: Ctx2D, chart: KnitChart, opts: ScarfRenderOptions, offsetX: number, edgeY: number, dir: 1 | -1, row: number, squeeze = 1) {
+/**
+ * Fringe at one end. `curl` (0–1) is how much the scarf rolls: the fringe then
+ * gathers into the tube's width and each strand curls inwards — towards the
+ * middle and, near the edges, back over itself, like yarn that wants to roll too.
+ */
+function drawFringe(ctx: Ctx2D, chart: KnitChart, opts: ScarfRenderOptions, offsetX: number, edgeY: number, dir: 1 | -1, row: number, curl = 0) {
   const w = opts.stitchPx;
-  const len = w * 10;
+  const len = w * 10 * (1 - 0.25 * curl);
   const rand = mulberry32((opts.seed ?? 1) + (dir > 0 ? 11 : 23));
   const group = 3;
+  const mid = (chart.w * w) / 2;
+  // Matches the rolled fabric's outer width at the ends.
+  const squeeze = 1 - 0.62 * curl * 0.55;
   for (let x = 1; x < chart.w - 1; x += group) {
     const hex = chart.yarns[chart.cells[row * chart.w + Math.min(chart.w - 1, x + 1)]].hex;
-    const mid = (chart.w * w) / 2;
-    const cx = offsetX + mid + ((x + group / 2) * w - mid) * squeeze;
+    const rel = ((x + group / 2) * w - mid) / mid; // -1 (left edge) … 1 (right edge)
+    const cx = offsetX + mid + rel * mid * squeeze;
     const strands = 7;
     for (let s = 0; s < strands; s++) {
-      const sx = cx + (s - strands / 2) * w * 0.18;
+      const sx = cx + (s - strands / 2) * w * 0.18 * (1 - 0.5 * curl);
       const l = len * (0.85 + rand() * 0.25);
-      const sway = (rand() - 0.5) * w * 1.4;
-      ctx.strokeStyle = shade(hex, (rand() - 0.5) * 0.25);
+      const sway = (rand() - 0.5) * w * 1.4 * (1 - curl);
+      // Curl: strands sweep towards the middle; outer ones hook back on themselves.
+      const inward = -rel * curl * mid * squeeze * 0.75;
+      const hook = Math.abs(rel) * curl * l * 0.45;
+      ctx.strokeStyle = shade(hex, (rand() - 0.5) * 0.25 - curl * 0.12 * Math.abs(rel));
       ctx.lineWidth = Math.max(1, w * 0.22 * opts.thickness);
       ctx.lineCap = 'round';
       ctx.beginPath();
       ctx.moveTo(cx, edgeY + dir * w * 0.6);
-      ctx.bezierCurveTo(sx, edgeY + dir * l * 0.35, sx + sway, edgeY + dir * l * 0.7, sx + sway * 1.4, edgeY + dir * l);
+      ctx.bezierCurveTo(
+        sx + inward * 0.2, edgeY + dir * l * 0.35,
+        sx + sway + inward * 0.9, edgeY + dir * (l * 0.75),
+        sx + sway * 1.4 + inward, edgeY + dir * (l - hook),
+      );
       ctx.stroke();
     }
     // Knot.
     ctx.fillStyle = shade(hex, -0.15);
     ctx.beginPath();
-    ctx.ellipse(cx, edgeY + dir * w * 0.8, w * 0.55, w * 0.42, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, edgeY + dir * w * 0.8, w * 0.55 * (1 - 0.3 * curl), w * 0.42, 0, 0, Math.PI * 2);
     ctx.fill();
   }
 }
@@ -529,10 +544,10 @@ function renderScarfUncached(source: KnitChart, opts: ScarfRenderOptions): Canva
   const body = makeCanvas(outW, outH);
   const bctx = ctx2d(body);
   if (opts.fringe) {
-    // Curled ends are narrower, so the fringe gathers in too.
-    const squeeze = 1 - 0.62 * 0.4 * effectiveCurl(chart, opts);
-    drawFringe(bctx, chart, opts, margin + waveAt(0), top, -1, 0, squeeze);
-    drawFringe(bctx, chart, opts, margin + waveAt(fabric.height), top + fabric.height, 1, chart.h - 1, squeeze);
+    // Curled ends are narrower, and the fringe rolls inwards with them.
+    const curl = effectiveCurl(chart, opts);
+    drawFringe(bctx, chart, opts, margin + waveAt(0), top, -1, 0, curl);
+    drawFringe(bctx, chart, opts, margin + waveAt(fabric.height), top + fabric.height, 1, chart.h - 1, curl);
   }
   const slice = opts.drape ? 3 : fabric.height;
   for (let y = 0; y < fabric.height; y += slice) {

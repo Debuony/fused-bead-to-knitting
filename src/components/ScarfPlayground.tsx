@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Slider } from './Field';
 import { useTranslation } from 'react-i18next';
 import type { KnitChart } from '../lib/knitChart';
 import { render, type Rendered } from '../lib/renderClient';
@@ -15,6 +16,65 @@ const MARGIN = 30;
 
 interface Node { x: number; y: number; px: number; py: number; lift: number }
 
+/** Everything that shapes how the scarf feels. Tunable live in the 🔧 panel. */
+export interface Physics {
+  /** Share of the scarf the hand holds around the grab point (0–0.5). Bigger = more of it moves together. */
+  handSpan: number;
+  /** How firmly that held region follows the hand (0–1). */
+  hold: number;
+  /** How quickly the hand catches up with the cursor per frame (0–1). Lower = calmer, less twitchy. */
+  follow: number;
+  /** Bending stiffness (0–1): how wide the tightest bend is, and how far stiffness reaches along the scarf. */
+  stiffness: number;
+  /** Speed kept per frame while lying on the table (0–0.99). Lower = more friction. */
+  tableDamping: number;
+  /** Speed kept per frame while lifted (0–0.99). */
+  airDamping: number;
+  /** Extra evening-out of curves (0–0.5). */
+  smoothing: number;
+  /** How high the held part lifts, in px. */
+  liftHeight: number;
+  /** Solver passes per frame (more = stiffer, slower). */
+  iterations: number;
+}
+
+export const DEFAULT_PHYSICS: Physics = {
+  handSpan: 0.14,
+  hold: 0.55,
+  follow: 0.35,
+  stiffness: 0.55,
+  tableDamping: 0.78,
+  airDamping: 0.9,
+  smoothing: 0.18,
+  liftHeight: 22,
+  iterations: 20,
+};
+
+const PHYSICS_KEY = 'bead2scarf-physics';
+
+function loadPhysics(): Physics {
+  try {
+    const raw = localStorage.getItem(PHYSICS_KEY);
+    if (raw) return { ...DEFAULT_PHYSICS, ...JSON.parse(raw) };
+  } catch {
+    /* ignore */
+  }
+  return { ...DEFAULT_PHYSICS };
+}
+
+/** Slider ranges for the tuning panel. */
+const PHYSICS_RANGES: Record<keyof Physics, [number, number, number]> = {
+  handSpan: [0, 0.5, 0.01],
+  hold: [0, 1, 0.05],
+  follow: [0.05, 1, 0.05],
+  stiffness: [0, 1, 0.05],
+  tableDamping: [0.3, 0.98, 0.01],
+  airDamping: [0.5, 0.99, 0.01],
+  smoothing: [0, 0.5, 0.02],
+  liftHeight: [0, 60, 1],
+  iterations: [4, 40, 1],
+};
+
 /**
  * The finished scarf lying on a table. Grab it anywhere and drag: the grabbed
  * part lifts (with a shadow), the rest trails along with fabric-like friction,
@@ -27,6 +87,20 @@ export function ScarfPlayground({ chart, options }: Props) {
   const [width, setWidth] = useState(800);
   const [tex, setTex] = useState<{ t: StripTexture; y0: number; y1: number } | null>(null);
   const [layoutKey, setLayoutKey] = useState(0);
+  const [physics, setPhysics] = useState<Physics>(loadPhysics);
+  const phys = useRef(physics);
+  phys.current = physics;
+  const [copied, setCopied] = useState(false);
+  const updatePhysics = (patch: Partial<Physics>) =>
+    setPhysics((p) => {
+      const next = { ...p, ...patch };
+      try {
+        localStorage.setItem(PHYSICS_KEY, JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -72,24 +146,33 @@ export function ScarfPlayground({ chart, options }: Props) {
     const length = (tex.y1 - tex.y0) * scale;
     const N = Math.max(24, Math.min(90, Math.round(length / 12)));
     const seg = length / (N - 1);
-    // Knitted fabric can't fold to a point: keep bends wider than the scarf itself.
-    const minRadius = fabricW * 0.8;
-    const minChord = 2 * seg * Math.cos(Math.min(1.2, seg / (2 * minRadius)));
     const edge = fabricHalf + 8;
     const clampPt = (p: Pt): Pt => ({ x: Math.max(edge, Math.min(width - edge, p.x)), y: Math.max(edge, Math.min(HEIGHT - edge, p.y)) });
 
     // Initial layout: a relaxed S across the table whose arc length matches the scarf.
     const nodes: Node[] = initialLayout(N, seg, width, HEIGHT).map((p) => ({ x: p.x, y: p.y, px: p.x, py: p.y, lift: 0 }));
     let grabbed = -1;
-    let target: Pt = { x: 0, y: 0 };
+    let cursor: Pt = { x: 0, y: 0 };
+    let hand: Pt = { x: 0, y: 0 };
+    /** Nodes held by the hand: their offset from the grab point and how firmly they're held. */
+    let held: { i: number; dx: number; dy: number; w: number }[] = [];
     let raf = 0;
     let running = false;
     let calm = 0;
 
     const step = () => {
+      const P = phys.current;
+      // Knitted fabric can't fold to a point: the tightest bend scales with stiffness.
+      const minRadius = fabricW * (0.3 + 1.7 * P.stiffness);
+      const chord = (k: number) => 2 * seg * (k / 2) * Math.cos(Math.min(1.3, (seg * k) / (2 * minRadius)));
+      const min2 = chord(2);
+      const min4 = chord(4);
+      if (grabbed >= 0) {
+        // The hand eases towards the cursor instead of snapping to it.
+        hand = { x: hand.x + (cursor.x - hand.x) * P.follow, y: hand.y + (cursor.y - hand.y) * P.follow };
+      }
       for (const n of nodes) {
-        const air = n.lift > 2;
-        const damp = air ? 0.94 : 0.8; // friction on the table, freer in the air
+        const damp = n.lift > 2 ? P.airDamping : P.tableDamping;
         const vx = (n.x - n.px) * damp;
         const vy = (n.y - n.py) * damp;
         n.px = n.x;
@@ -97,22 +180,28 @@ export function ScarfPlayground({ chart, options }: Props) {
         n.x += vx;
         n.y += vy;
       }
-      for (let it = 0; it < 24; it++) {
+      for (let it = 0; it < P.iterations; it++) {
+        // The held region moves with the hand as a whole (keeps its shape), firmest at the grab point.
         if (grabbed >= 0) {
-          nodes[grabbed].x = target.x;
-          nodes[grabbed].y = target.y;
+          for (const h of held) {
+            const n = nodes[h.i];
+            const k = h.i === grabbed ? 1 : h.w * P.hold;
+            n.x += (hand.x + h.dx - n.x) * k;
+            n.y += (hand.y + h.dy - n.y) * k;
+          }
         }
         // Keep the spacing (fabric doesn't stretch)…
         for (let i = 0; i < N - 1; i++) satisfy(nodes, i, i + 1, seg, seg, grabbed);
-        // …and resist sharp kinks (bending stiffness).
-        for (let i = 0; i < N - 2; i++) satisfy(nodes, i, i + 2, minChord, seg * 2, grabbed);
-        // Gentle smoothing so the fabric curves evenly instead of zig-zagging between points.
-        if (it % 6 === 0)
+        // …and resist bending, both locally and over a longer stretch.
+        for (let i = 0; i < N - 2; i++) satisfy(nodes, i, i + 2, min2, seg * 2, grabbed);
+        if (P.stiffness > 0) for (let i = 0; i < N - 4; i++) satisfy(nodes, i, i + 4, min4, seg * 4, grabbed);
+        // Even out curves so they don't zig-zag between points.
+        if (P.smoothing > 0 && it % 4 === 0)
           for (let i = 1; i < N - 1; i++) {
             if (i === grabbed) continue;
             const n = nodes[i];
-            n.x += ((nodes[i - 1].x + nodes[i + 1].x) / 2 - n.x) * 0.12;
-            n.y += ((nodes[i - 1].y + nodes[i + 1].y) / 2 - n.y) * 0.12;
+            n.x += ((nodes[i - 1].x + nodes[i + 1].x) / 2 - n.x) * P.smoothing;
+            n.y += ((nodes[i - 1].y + nodes[i + 1].y) / 2 - n.y) * P.smoothing;
           }
         // Stay on the table: keep the whole width of the scarf inside it.
         for (const n of nodes) {
@@ -120,13 +209,15 @@ export function ScarfPlayground({ chart, options }: Props) {
           n.y = Math.max(edge, Math.min(HEIGHT - edge, n.y));
         }
       }
-      // Lift: nodes near the grabbed one rise, then settle back down.
+      // Lift: the held part rises (and a bit beyond it), then settles back down.
       let motion = 0;
+      const liftSpan = Math.max(2, N * (P.handSpan + 0.08));
       nodes.forEach((n, i) => {
-        const want = grabbed >= 0 ? Math.max(0, 1 - Math.abs(i - grabbed) / (N * 0.18)) * 26 : 0;
+        const want = grabbed >= 0 ? Math.max(0, 1 - Math.abs(i - grabbed) / liftSpan) * P.liftHeight : 0;
         n.lift += (want - n.lift) * 0.2;
         motion += Math.abs(n.x - n.px) + Math.abs(n.y - n.py) + Math.abs(want - n.lift);
       });
+      if (grabbed >= 0) motion += Math.abs(cursor.x - hand.x) + Math.abs(cursor.y - hand.y);
       return motion;
     };
 
@@ -186,7 +277,16 @@ export function ScarfPlayground({ chart, options }: Props) {
       const i = nearest(p);
       if (i < 0) return;
       grabbed = i;
-      target = clampPt(p);
+      cursor = clampPt(p);
+      hand = { x: nodes[i].x, y: nodes[i].y };
+      const span = Math.max(0, phys.current.handSpan * N);
+      held = [];
+      for (let j = Math.max(0, Math.floor(i - span)); j <= Math.min(N - 1, Math.ceil(i + span)); j++) {
+        const t = span > 0 ? Math.abs(j - i) / (span + 1) : j === i ? 0 : 1;
+        if (t >= 1) continue;
+        const w = 1 - t * t * (3 - 2 * t); // smooth falloff
+        held.push({ i: j, dx: nodes[j].x - hand.x, dy: nodes[j].y - hand.y, w });
+      }
       canvas.setPointerCapture(e.pointerId);
       canvas.style.cursor = 'grabbing';
       wake();
@@ -194,7 +294,7 @@ export function ScarfPlayground({ chart, options }: Props) {
     const onMove = (e: PointerEvent) => {
       const p = toLocal(e);
       if (grabbed >= 0) {
-        target = clampPt(p);
+        cursor = clampPt(p);
         wake();
       } else {
         canvas.style.cursor = nearest(p) >= 0 ? 'grab' : 'default';
@@ -202,6 +302,7 @@ export function ScarfPlayground({ chart, options }: Props) {
     };
     const onUp = () => {
       grabbed = -1;
+      held = [];
       canvas.style.cursor = 'grab';
       wake();
     };
@@ -226,6 +327,43 @@ export function ScarfPlayground({ chart, options }: Props) {
         <span className="hint">🖐 {t('scarf.playHint')}</span>
         <button className="btn small ghost" onClick={() => setLayoutKey((k) => k + 1)}>↺ {t('scarf.playReset')}</button>
       </div>
+      <details className="more tuning">
+        <summary>🔧 {t('physics.title')}</summary>
+        <div className="more-body">
+          <p className="hint">{t('physics.hint')}</p>
+          <div className="tuning-grid">
+            {(Object.keys(PHYSICS_RANGES) as (keyof Physics)[]).map((k) => {
+              const [min, max, stepV] = PHYSICS_RANGES[k];
+              return (
+                <Slider
+                  key={k}
+                  label={<span title={t(`physics.${k}Hint`)}>{t(`physics.${k}`)}</span>}
+                  value={physics[k]}
+                  min={min}
+                  max={max}
+                  step={stepV}
+                  onChange={(v) => updatePhysics({ [k]: v } as Partial<Physics>)}
+                  format={(v) => (stepV >= 1 ? String(v) : v.toFixed(2))}
+                />
+              );
+            })}
+          </div>
+          <div className="btn-row">
+            <button
+              className="btn small"
+              onClick={() => {
+                const text = JSON.stringify(physics);
+                navigator.clipboard?.writeText(text).then(() => setCopied(true), () => setCopied(true));
+                setTimeout(() => setCopied(false), 2000);
+              }}
+            >
+              📋 {copied ? t('physics.copied') : t('physics.copy')}
+            </button>
+            <button className="btn small ghost" onClick={() => updatePhysics({ ...DEFAULT_PHYSICS })}>↺ {t('physics.reset')}</button>
+          </div>
+          <textarea className="text-input mono" readOnly rows={2} value={JSON.stringify(physics)} onFocus={(e) => e.currentTarget.select()} />
+        </div>
+      </details>
       <div ref={wrapRef} className="playground-table">
         <canvas ref={canvasRef} style={{ touchAction: 'none', cursor: 'grab' }} />
         {!tex && <div className="machine-done">🧶 {t('scarf.knitting')}</div>}

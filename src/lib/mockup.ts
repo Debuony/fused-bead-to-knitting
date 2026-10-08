@@ -22,6 +22,25 @@ export interface MockupOptions {
   hairStyle: HairStyle;
   hairColor: string;
   skin: string;
+  /** Gift-message typeface and size (1 = default). */
+  messageFont: MessageFont;
+  messageSize: number;
+}
+
+export type MessageFont = 'rounded' | 'hand' | 'serif' | 'sans';
+export const MESSAGE_FONTS: MessageFont[] = ['rounded', 'hand', 'serif', 'sans'];
+
+/** System fonts only (also usable inside the render worker), with Chinese coverage on Mac and Windows. */
+const FONT_STACKS: Record<MessageFont, { family: string; weight: number }> = {
+  rounded: { family: '"Yuanti SC", "Hiragino Maru Gothic ProN", "Arial Rounded MT Bold", "Microsoft YaHei", sans-serif', weight: 600 },
+  hand: { family: '"Kaiti SC", "STKaiti", "KaiTi", "Bradley Hand", "Segoe Print", cursive', weight: 500 },
+  serif: { family: '"Songti SC", "STSong", "SimSun", Georgia, "Times New Roman", serif', weight: 500 },
+  sans: { family: '"PingFang SC", "Microsoft YaHei", "Helvetica Neue", system-ui, sans-serif', weight: 600 },
+};
+
+function messageFont(m: MessageFont, px: number) {
+  const f = FONT_STACKS[m] ?? FONT_STACKS.sans;
+  return `${f.weight} ${Math.round(px)}px ${f.family}`;
 }
 
 export const DEFAULT_MOCKUP_OPTIONS: MockupOptions = {
@@ -31,6 +50,8 @@ export const DEFAULT_MOCKUP_OPTIONS: MockupOptions = {
   hairStyle: 'long',
   hairColor: HAIR_COLORS[0],
   skin: SKIN_TONES[1],
+  messageFont: 'rounded',
+  messageSize: 1,
 };
 
 /** Scenes with a person in them. */
@@ -290,21 +311,25 @@ function beadPiece(ctx: Ctx2D, grid: Grid, x: number, y: number, size: number, r
   ctx.restore();
 }
 
+/** Wrap text to `maxW`: Latin words stay whole, Chinese/Japanese break between characters. */
 function wrapText(ctx: Ctx2D, text: string, x: number, y: number, maxW: number, lh: number) {
+  // Tokens: runs of Latin letters/digits (with trailing punctuation) or single other characters.
+  const tokens = text.match(/[A-Za-z0-9'’.,!?:;-]+\s*|\s+|./gu) ?? [];
   let line = '';
   let yy = y;
-  for (const ch of [...text]) {
-    if (ctx.measureText(line + ch).width > maxW && line) {
-      ctx.fillText(line, x, yy);
-      line = ch.trimStart();
+  for (const tok of tokens) {
+    const tryLine = line + tok;
+    if (ctx.measureText(tryLine.trimEnd()).width > maxW && line.trim()) {
+      ctx.fillText(line.trimEnd(), x, yy);
+      line = tok.trimStart();
       yy += lh;
-    } else line += ch;
+    } else line = tryLine;
   }
-  if (line) ctx.fillText(line, x, yy);
+  if (line.trim()) ctx.fillText(line.trimEnd(), x, yy);
 }
 
 /** Gift tag with the message and (optionally) a tiny bead charm. */
-function tag(ctx: Ctx2D, grid: Grid | null, text: string | null, x: number, y: number, rot: number) {
+function tag(ctx: Ctx2D, grid: Grid | null, text: string | null, x: number, y: number, rot: number, m: MockupOptions) {
   if (!grid && !text) return;
   ctx.save();
   ctx.translate(x, y);
@@ -334,14 +359,15 @@ function tag(ctx: Ctx2D, grid: Grid | null, text: string | null, x: number, y: n
   if (text) {
     ctx.fillStyle = '#5b4a3f';
     ctx.textAlign = 'center';
-    ctx.font = '600 20px "PingFang SC", system-ui, sans-serif';
-    wrapText(ctx, text, 0, grid ? 85 : 20, 160, 24);
+    const px = 20 * m.messageSize;
+    ctx.font = messageFont(m.messageFont, px);
+    wrapText(ctx, text, 0, grid ? 85 : 20, 160, px * 1.2);
   }
   ctx.restore();
 }
 
 /** Folded note card for the outfit scenes. */
-function noteCard(ctx: Ctx2D, text: string, x: number, y: number, rot: number, accent: string) {
+function noteCard(ctx: Ctx2D, text: string, x: number, y: number, rot: number, accent: string, m: MockupOptions) {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(rot);
@@ -355,8 +381,9 @@ function noteCard(ctx: Ctx2D, text: string, x: number, y: number, rot: number, a
   ctx.fillRect(-130, -80, 260, 10);
   ctx.fillStyle = '#5b4a3f';
   ctx.textAlign = 'center';
-  ctx.font = '600 24px "PingFang SC", system-ui, sans-serif';
-  wrapText(ctx, text, 0, -20, 220, 30);
+  const px = 24 * m.messageSize;
+  ctx.font = messageFont(m.messageFont, px);
+  wrapText(ctx, text, 0, -20 - (m.messageSize - 1) * 14, 220, px * 1.25);
   ctx.font = '22px system-ui, sans-serif';
   ctx.fillText('♡', 0, 58);
   ctx.restore();
@@ -375,7 +402,7 @@ function portraitExtras(ctx: Ctx2D, grid: Grid, m: MockupOptions, message: strin
     ctx.restore();
     beadPiece(ctx, grid, 135, 995, 150);
   }
-  if (m.showMessage && message) noteCard(ctx, message, 720, 1000, -0.06, accent);
+  if (m.showMessage && message) noteCard(ctx, message, 720, 1000, -0.06, accent, m);
 }
 
 /* ---------- Scenes ---------- */
@@ -614,7 +641,7 @@ function sceneGiftbox(ctx: Ctx2D, tex: ScarfTexture, grid: Grid, m: MockupOption
     ctx.stroke();
   }
   foldedScarf(ctx, tex, 255, 645, 600, 210);
-  tag(ctx, m.showBeads ? grid : null, m.showMessage ? message : null, 690, 930, 0.12);
+  tag(ctx, m.showBeads ? grid : null, m.showMessage ? message : null, 690, 930, 0.12, m);
 }
 
 function sceneFlatlay(ctx: Ctx2D, tex: ScarfTexture, grid: Grid, m: MockupOptions, message: string) {
@@ -646,7 +673,7 @@ function sceneFlatlay(ctx: Ctx2D, tex: ScarfTexture, grid: Grid, m: MockupOption
   const width = Math.max(90, Math.min(170, (L * tex.sw) / (tex.y1 - tex.y0)));
   withShadow(ctx, (l) => drawStrip(l, tex, tex.y0, tex.y1, ctrl, width), 18, 9);
   if (m.showBeads) beadPiece(ctx, grid, 175, 720, 190, -0.05);
-  if (m.showMessage && message) tag(ctx, null, message, 190, 990, -0.08);
+  if (m.showMessage && message) tag(ctx, null, message, 190, 990, -0.08, m);
 }
 
 /** Render a lifestyle or product mockup of the scarf. `message` is the gift text to show. */
