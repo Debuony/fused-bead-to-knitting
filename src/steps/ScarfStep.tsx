@@ -40,7 +40,12 @@ export function ScarfStep() {
   // Finished scarf and mockups render in a background worker, then appear in the holder.
   const token = useRef(0);
   useEffect(() => {
-    if (!chart || !grid || !holder.current || view === 'machine' || (view === 'final' && finalMode === 'play')) return;
+    if (!chart || !grid || !holder.current || view === 'machine' || (view === 'final' && finalMode === 'play')) {
+      // Nothing to render here; drop any "knitting…" state left by a cancelled render.
+      token.current++;
+      setBusy(false);
+      return;
+    }
     const my = ++token.current;
     setBusy(true);
     const id = window.setTimeout(async () => {
