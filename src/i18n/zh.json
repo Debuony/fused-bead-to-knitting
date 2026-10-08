@@ -289,15 +289,28 @@
     "done": "围巾织好啦！",
     "rows": "第 {{n}} / {{total}} 行",
     "jump": "直接看成品",
-    "hint": "帮针织机一把：按住空格，或者随便打字就会织 · ← → 手动推机头 · 也可以用鼠标拖。"
+    "hint": "帮针织机一把：按住空格，或者随便打字就会织 · ← → 手动推机头 · 也可以用鼠标拖。",
+    "threading": "正在穿线…"
   },
   "mockup": {
     "trench": "风衣",
     "y2k": "Y2K",
     "giftbox": "礼盒",
     "flatlay": "平铺",
-    "tag": "礼物卡片文字",
     "defaultTag": "亲手织的围巾 ♡",
-    "download": "下载效果图"
+    "download": "下载效果图",
+    "person": "人物",
+    "skin": "肤色",
+    "hairColor": "发色",
+    "showMessage": "加上祝福卡片",
+    "showBeads": "展示原来的拼豆作品",
+    "hair": {
+      "long": "长直发",
+      "bob": "波波头",
+      "ponytail": "马尾",
+      "buns": "丸子头",
+      "curly": "卷发",
+      "pixie": "精灵短发"
+    }
   }
 }

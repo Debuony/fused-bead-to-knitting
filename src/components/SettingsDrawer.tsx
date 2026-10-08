@@ -45,6 +45,7 @@ export function useApplyTheme() {
       bg = p.css;
       size = p.size ?? 'auto';
     }
+    document.documentElement.dataset.bg = s.backgroundId === 'custom-image' && s.customImage ? 'image' : 'plain';
     root.setProperty('--page-bg', bg);
     root.setProperty('--page-bg-size', size);
   }, [s.accent, s.fontScale, s.panelOpacity, s.backgroundId, s.customColor, s.customImage]);

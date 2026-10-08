@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { shade } from '../lib/color';
 import type { KnitChart } from '../lib/knitChart';
-import { renderScarf, type ScarfRenderOptions } from '../lib/scarfRender';
+import { render, type Rendered } from '../lib/renderClient';
+import type { ScarfRenderOptions } from '../lib/scarfRender';
 import { useSettings } from '../store/settingsStore';
 import { Slider } from './Field';
 
@@ -48,11 +49,17 @@ export function KnittingMachine({ chart, options, onDone, onJump }: Props) {
   const cfg = useRef({ playing, speed, onDone });
   cfg.current = { playing, speed, onDone };
 
-  const sp = Math.max(3, Math.min(12, Math.floor(Math.min(340, width * 0.55) / chart.w)));
-  const fabric = useMemo(
-    () => renderScarf(chart, { ...options, stitchPx: sp, orientation: 'vertical', drape: false, shadow: false }),
-    [chart, options, sp],
-  );
+  // Stitch size on screen; capped so the fabric texture stays small enough to render fast.
+  const sp = Math.max(3, Math.min(8, Math.floor(Math.min(280, width * 0.5) / chart.w)));
+  // The fabric texture is knitted in a background worker; the machine waits ("threading") until it arrives.
+  const [fabric, setFabric] = useState<Rendered | null>(null);
+  useEffect(() => {
+    let alive = true;
+    render({ kind: 'scarf', chart, opts: { ...options, stitchPx: sp, orientation: 'vertical', drape: false, shadow: false } }, 'machine')
+      .then((f) => alive && setFabric(f))
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [chart, options, sp]);
   const rowsPerPass = Math.max(1, Math.round(chart.h / 70));
 
   // Distinct yarns, main first, for the cones.
@@ -150,6 +157,7 @@ export function KnittingMachine({ chart, options, onDone, onJump }: Props) {
     if (s.carX < minX || s.carX > maxX) s.carX = minX;
     let last = performance.now();
     let lastDisplay = 0;
+    let lastDraw = 0;
     let raf = 0;
 
     const finish = () => {
@@ -191,7 +199,7 @@ export function KnittingMachine({ chart, options, onDone, onJump }: Props) {
       last = now;
       const { playing: p, speed: v } = cfg.current;
 
-      if (!s.done) {
+      if (!s.done && fabric) {
         // Distance (in passes) the carriage travels on its own this frame.
         let passes = 0;
         if (p) passes += v * dt;
@@ -213,7 +221,12 @@ export function KnittingMachine({ chart, options, onDone, onJump }: Props) {
       s.bounce = Math.max(0, s.bounce - dt * 3);
       s.blink = (s.blink + dt) % 4;
 
-      draw(ctx, dpr, now / 1000);
+      // Idle (paused or finished, nothing moving): redraw at ~10 fps, just enough for blinking.
+      const moving = (!s.done && (p || s.space || s.pending > 0 || s.arrows.size > 0 || s.dragging)) || s.particles.length > 0 || s.bounce > 0;
+      if (moving || now - lastDraw > 100 || !fabric) {
+        lastDraw = now;
+        draw(ctx, dpr, now / 1000);
+      }
       if (now - lastDisplay > 90) {
         lastDisplay = now;
         setDisplay((d) => (d.rows === Math.floor(s.rows) && d.done === s.done ? d : { rows: Math.floor(s.rows), done: s.done }));
@@ -234,14 +247,16 @@ export function KnittingMachine({ chart, options, onDone, onJump }: Props) {
       c.fillRect(bedRight - 24, bedBottom, 10, HEIGHT - bedBottom);
 
       // Fabric emerging below the bed: newest row right under the needles.
-      const reveal = (s.rows / chart.h) * fabric.height;
-      if (reveal > 0.5) {
-        c.save();
-        c.shadowColor = 'rgba(0,0,0,0.18)';
-        c.shadowBlur = 10;
-        c.shadowOffsetY = 4;
+      const reveal = fabric ? (s.rows / chart.h) * fabric.height : 0;
+      if (fabric && reveal > 0.5) {
+        // Cheap soft shadow (a blurred shadow every frame would keep the page busy).
+        const visible = Math.min(reveal, HEIGHT - bedBottom);
+        const g = c.createLinearGradient(x0 + scarfW, 0, x0 + scarfW + 12, 0);
+        g.addColorStop(0, 'rgba(0,0,0,0.14)');
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        c.fillStyle = g;
+        c.fillRect(x0 + scarfW, bedBottom + 6, 12, visible);
         c.drawImage(fabric, 0, fabric.height - reveal, fabric.width, reveal, x0 - margin, bedBottom + 2, fabric.width, reveal);
-        c.restore();
       }
 
       // Yarn cones.
@@ -431,6 +446,7 @@ export function KnittingMachine({ chart, options, onDone, onJump }: Props) {
       <div ref={wrapRef} className="machine-stage">
         <canvas ref={canvasRef} style={{ touchAction: 'none', cursor: 'ew-resize' }} />
         {display.done && <div className="machine-done">🎉 {t('machine.done')}</div>}
+        {!fabric && <div className="machine-done">🧵 {t('machine.threading')}</div>}
       </div>
       <div className="progress">
         <div className="bar"><div style={{ width: `${pct}%` }} /></div>

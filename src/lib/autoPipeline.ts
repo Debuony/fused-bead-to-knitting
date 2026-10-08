@@ -1,6 +1,7 @@
 import { useProject } from '../store/projectStore';
 import { useSettings } from '../store/settingsStore';
-import { autoCrop, autoMainYarn, autoPixelize } from './auto';
+import { autoMainYarn } from './auto';
+import { compute } from './renderClient';
 import { FULL_CROP, canvasImageData, workingImage } from './imageUtils';
 import { getPalette } from './palettes';
 
@@ -13,11 +14,11 @@ export async function runFullAuto(): Promise<{ detected: boolean }> {
   const settings = useSettings.getState();
   if (!project.image) throw new Error('no image');
   const full = await workingImage(project.image, 0, FULL_CROP, 600);
-  const crop = autoCrop(canvasImageData(full));
+  const crop = await compute({ kind: 'autoCrop', img: canvasImageData(full) });
   project.setTransform({ rotation: 0, crop });
   const work = await workingImage(project.image, 0, crop);
   const palette = getPalette(project.pixelOptions.paletteId, settings.customPalettes)?.colors;
-  const res = autoPixelize(canvasImageData(work), palette);
+  const res = await compute({ kind: 'autoPixelize', img: canvasImageData(work), palette });
   project.setPixelOptions({ gridW: res.gridW, gridH: res.gridH, maxColors: res.maxColors, removeBg: res.removeBg, bgTol: 0 });
   project.commitGrid(res.grid);
   project.setChartOptions({

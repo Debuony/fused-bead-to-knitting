@@ -5,7 +5,8 @@ import { Check, NumberField, Seg, Slider } from '../components/Field';
 import { GridCanvas, type BeadStyle } from '../components/GridCanvas';
 import { PaletteEditor } from '../components/PaletteEditor';
 import { PaletteSelect } from '../components/PaletteSelect';
-import { autoGridSize, autoPixelize } from '../lib/auto';
+import { autoGridSize } from '../lib/auto';
+import { compute } from '../lib/renderClient';
 import { rgbToHex } from '../lib/color';
 import { countColors, type Grid } from '../lib/grid';
 import { canvasImageData, workingImage } from '../lib/imageUtils';
@@ -67,9 +68,11 @@ export function PixelizeStep() {
     setNote(size.detected ? t('pixelize.detected', { w: size.w, h: size.h }) : t('pixelize.detectFailed'));
   };
 
-  const autoAll = () => {
+  const [autoBusy, setAutoBusy] = useState(false);
+  const autoAll = async () => {
     if (!cropped) return;
-    const res = autoPixelize(cropped.data, palette);
+    setAutoBusy(true);
+    const res = await compute({ kind: 'autoPixelize', img: cropped.data, palette }).finally(() => setAutoBusy(false));
     setPixelOptions({ gridW: res.gridW, gridH: res.gridH, maxColors: res.maxColors, removeBg: res.removeBg, bgTol: 0 });
     setNote(t(res.detected ? 'pixelize.autoDone' : 'pixelize.autoDoneGuess', { w: res.gridW, h: res.gridH, n: res.maxColors }));
   };
@@ -164,6 +167,7 @@ export function PixelizeStep() {
         autoHint={note || t('pixelize.autoHint')}
         onAuto={autoAll}
         autoDisabled={!cropped}
+        autoBusy={autoBusy}
         back={() => goTo(0)}
         next={{ label: t('pixelize.confirm'), onClick: confirm, disabled: !preview }}
       >

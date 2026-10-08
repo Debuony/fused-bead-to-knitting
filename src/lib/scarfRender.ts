@@ -1,3 +1,4 @@
+import { ctx2d, makeCanvas, type Canvas, type Ctx2D } from './canvas';
 import { hexToRgb, rgbToHex, shade } from './color';
 import type { KnitChart, Yarn } from './knitChart';
 import { mulberry32 } from './quantize';
@@ -111,35 +112,40 @@ export function applyColorChange(chart: KnitChart, opts: ScarfRenderOptions): Kn
 }
 
 /** Mohair: soften stitch definition and add loose fibres that wander across stitches. */
-function mohairize(c: HTMLCanvasElement, chart: KnitChart, w: number, h: number, seed: number) {
-  const ctx = c.getContext('2d')!;
-  const soft = makeCanvas(c.width, c.height);
-  const sctx = soft.getContext('2d')!;
-  sctx.filter = `blur(${Math.max(0.6, w * 0.12)}px)`;
-  sctx.drawImage(c, 0, 0);
-  ctx.globalAlpha = 0.65;
-  ctx.drawImage(soft, 0, 0);
+function mohairize(c: Canvas, chart: KnitChart, w: number, h: number, seed: number) {
+  const ctx = ctx2d(c);
+  // Soften stitch definition: a half-size copy scaled back up is a cheap blur.
+  const soft = makeCanvas(c.width / 2, c.height / 2);
+  ctx2d(soft).drawImage(c, 0, 0, soft.width, soft.height);
+  ctx.globalAlpha = 0.6;
+  ctx.drawImage(soft, 0, 0, c.width, c.height);
   ctx.globalAlpha = 1;
   const rand = mulberry32(seed * 31 + 7);
-  ctx.lineCap = 'round';
+  // Batch fibres into a few paths per yarn (by tint and opacity) — far faster than one stroke each.
+  const paths = chart.yarns.map(() => [new Path2D(), new Path2D(), new Path2D(), new Path2D()]);
   for (let y = 0; y < chart.h; y++)
     for (let x = 0; x < chart.w; x++) {
-      const hex = chart.yarns[chart.cells[y * chart.w + x]].hex;
+      const yarn = chart.cells[y * chart.w + x];
       const n = 2 + (rand() < 0.5 ? 1 : 0);
       for (let k = 0; k < n; k++) {
         const x0 = (x + rand()) * w;
         const y0 = (y + rand()) * h;
         const len = w * (1.5 + rand() * 2.5);
         const a = rand() * Math.PI * 2;
-        ctx.strokeStyle = shade(hex, 0.1 + rand() * 0.3);
-        ctx.globalAlpha = 0.28 + rand() * 0.2;
-        ctx.lineWidth = Math.max(0.4, w * 0.05);
-        ctx.beginPath();
-        ctx.moveTo(x0, y0);
-        ctx.quadraticCurveTo(x0 + Math.cos(a + 0.8) * len * 0.5, y0 + Math.sin(a + 0.8) * len * 0.5, x0 + Math.cos(a) * len, y0 + Math.sin(a) * len);
-        ctx.stroke();
+        const path = paths[yarn][Math.floor(rand() * 4)];
+        path.moveTo(x0, y0);
+        path.quadraticCurveTo(x0 + Math.cos(a + 0.8) * len * 0.5, y0 + Math.sin(a + 0.8) * len * 0.5, x0 + Math.cos(a) * len, y0 + Math.sin(a) * len);
       }
     }
+  ctx.lineCap = 'round';
+  ctx.lineWidth = Math.max(0.4, w * 0.05);
+  chart.yarns.forEach((yarn, i) =>
+    paths[i].forEach((path, b) => {
+      ctx.strokeStyle = shade(yarn.hex, b % 2 ? 0.35 : 0.15);
+      ctx.globalAlpha = b < 2 ? 0.3 : 0.45;
+      ctx.stroke(path);
+    }),
+  );
   ctx.globalAlpha = 1;
 }
 
@@ -147,50 +153,53 @@ function mohairize(c: HTMLCanvasElement, chart: KnitChart, w: number, h: number,
  * Roll the long edges under (cylinder projection per row). The ends stay a bit
  * flatter, like a real curled scarf.
  */
-function curlFabric(c: HTMLCanvasElement, amount: number) {
-  if (amount < 0.02) return;
-  const ctx = c.getContext('2d')!;
-  const W = c.width;
-  const H = c.height;
-  const src = ctx.getImageData(0, 0, W, H);
-  const out = ctx.createImageData(W, H);
+function curlPixels(src: ImageData, amount: number): ImageData {
+  const W = src.width;
+  const H = src.height;
+  const out = new ImageData(W, H);
   const cx = W / 2;
-  const endZone = Math.max(1, H * 0.035);
+  // The roll eases in over the first/last ~5% (cast-on and bind-off flare out a little).
+  const endZone = Math.max(1, H * 0.05);
+  const L = [-0.42, 0.88]; // light from the left, mostly frontal (x, z)
   for (let y = 0; y < H; y++) {
-    const e = Math.min(1, Math.min(y, H - 1 - y) / endZone);
-    const a = amount * (0.4 + 0.6 * e);
+    const e0 = Math.min(1, Math.min(y, H - 1 - y) / endZone);
+    const e = e0 * e0 * (3 - 2 * e0);
+    const a = amount * (0.55 + 0.45 * e);
     const outHalf = (W / 2) * (1 - 0.62 * a);
     const srcHalf = (W / 2) * (1 - 0.5 * a);
+    // How far around the cylinder the visible face reaches (flat → 0, full tube → 90°).
+    const maxAngle = (Math.PI / 2) * a;
     for (let x = Math.floor(cx - outHalf); x < Math.ceil(cx + outHalf); x++) {
       if (x < 0 || x >= W) continue;
       const t = Math.max(-1, Math.min(1, (x + 0.5 - cx) / outHalf));
       const sx = Math.min(W - 1, Math.max(0, Math.round(cx + (Math.asin(t) / (Math.PI / 2)) * srcHalf)));
-      const light = 1 - a * 0.75 * (1 - Math.sqrt(1 - t * t));
+      const theta = t * maxAngle;
+      const nx = Math.sin(theta);
+      const nz = Math.cos(theta);
+      const diffuse = Math.max(0, nx * L[0] + nz * L[1]) / L[1];
+      const rim = Math.pow(Math.abs(t), 6) * a * 0.18; // edges tuck under → a little darker
+      const light = Math.max(0.6, (0.5 + 0.5 * diffuse) - rim);
+      const spec = Math.pow(Math.max(0, nx * L[0] + nz * L[1]), 24) * a * 18;
       const si = (y * W + sx) * 4;
       const oi = (y * W + x) * 4;
-      out.data[oi] = src.data[si] * light;
-      out.data[oi + 1] = src.data[si + 1] * light;
-      out.data[oi + 2] = src.data[si + 2] * light;
+      out.data[oi] = Math.min(255, src.data[si] * light + spec);
+      out.data[oi + 1] = Math.min(255, src.data[si + 1] * light + spec);
+      out.data[oi + 2] = Math.min(255, src.data[si + 2] * light + spec);
       out.data[oi + 3] = src.data[si + 3];
     }
   }
-  ctx.putImageData(out, 0, 0);
+  return out;
 }
 
 const VARIANTS = 3;
 
-function makeCanvas(w: number, h: number) {
-  const c = document.createElement('canvas');
-  c.width = Math.max(1, Math.ceil(w));
-  c.height = Math.max(1, Math.ceil(h));
-  return c;
-}
 
 /** One knit "V" (two tilted loops) or a purl bump, pre-rendered for speed. */
-function stitchSprite(hex: string, purl: boolean, w: number, h: number, opts: ScarfRenderOptions, variant: number): HTMLCanvasElement {
+function stitchSprite(hex: string, purl: boolean, w: number, h: number, opts: ScarfRenderOptions, variant: number): Canvas {
   const padY = h * 0.4;
   const c = makeCanvas(w, h + padY * 2);
-  const ctx = c.getContext('2d')!;
+  // CPU-backed: we read the pixels straight back, which is slow from a GPU canvas.
+  const ctx = ctx2d(c, { willReadFrequently: true });
   const rand = mulberry32((opts.seed ?? 1) * 997 + variant * 131 + hex.length);
   const base = shade(hex, (variant - 1) * 0.035);
   const light = shade(base, 0.22);
@@ -256,42 +265,101 @@ function stitchSprite(hex: string, purl: boolean, w: number, h: number, opts: Sc
 }
 
 /** Renders the flat knitted fabric (length runs top → bottom). */
-function renderFabric(chart: KnitChart, opts: ScarfRenderOptions): HTMLCanvasElement {
+function renderFabric(chart: KnitChart, opts: ScarfRenderOptions): Canvas {
   const w = opts.stitchPx;
   const h = (opts.stitchPx * chart.gaugeSts) / chart.gaugeRows;
   const c = makeCanvas(chart.w * w, chart.h * h);
-  const ctx = c.getContext('2d')!;
-  const sprites = new Map<string, HTMLCanvasElement>();
+  const W = c.width;
+  const H = c.height;
+  // Composite straight into a pixel buffer: thousands of tiny drawImage calls are the
+  // slowest part of canvas rendering, a typed-array blend is ~50× faster.
+  const out = new ImageData(W, H);
+  const px = out.data;
+
+  // Gaps between stitches show a darker tone of the yarn.
+  const px32 = new Uint32Array(px.buffer);
+  const gap = chart.yarns.map((y) => {
+    const [r, g, b] = hexToRgb(shade(y.hex, -0.16));
+    return ((255 << 24) | (b << 16) | (g << 8) | r) >>> 0; // RGBA bytes on little-endian
+  });
+  for (let y = 0; y < chart.h; y++) {
+    const y0 = Math.floor(y * h);
+    const y1 = Math.min(H, Math.ceil((y + 1) * h));
+    for (let x = 0; x < chart.w; x++) {
+      const v = gap[chart.cells[y * chart.w + x]];
+      for (let yy = y0; yy < y1; yy++) px32.fill(v, yy * W + x * w, yy * W + (x + 1) * w);
+    }
+  }
+
+  const sprites = new Map<string, ImageData>();
   const sprite = (yarn: number, purl: number, v: number) => {
     const key = `${yarn}-${purl}-${v}`;
     let s = sprites.get(key);
     if (!s) {
       const o = opts.yarnType === 'mohair' ? { ...opts, fuzz: Math.max(opts.fuzz, 0.9) } : opts;
-      s = stitchSprite(chart.yarns[yarn].hex, purl === 1, w, h, o, v);
+      const sc = stitchSprite(chart.yarns[yarn].hex, purl === 1, w, h, o, v);
+      s = ctx2d(sc).getImageData(0, 0, sc.width, sc.height);
       sprites.set(key, s);
     }
     return s;
   };
-  // Gaps between stitches show a darker tone of the yarn.
-  for (let y = 0; y < chart.h; y++)
-    for (let x = 0; x < chart.w; x++) {
-      ctx.fillStyle = shade(chart.yarns[chart.cells[y * chart.w + x]].hex, -0.16);
-      ctx.fillRect(x * w, y * h, w + 0.5, h + 0.5);
-    }
   const rand = mulberry32(opts.seed ?? 1);
   const padY = h * 0.4;
   for (let y = 0; y < chart.h; y++)
     for (let x = 0; x < chart.w; x++) {
       const i = y * chart.w + x;
       const s = sprite(chart.cells[i], chart.stitch[i], Math.floor(rand() * VARIANTS));
-      ctx.drawImage(s, x * w, y * h - padY);
+      blit(px, W, H, s, x * w, Math.round(y * h - padY));
     }
-  if (opts.yarnType === 'mohair') mohairize(c, chart, w, h, opts.seed ?? 1);
-  curlFabric(c, effectiveCurl(chart, opts));
+
+  const ctx = ctx2d(c, { willReadFrequently: opts.yarnType === 'mohair' });
+  const curl = effectiveCurl(chart, opts);
+  if (opts.yarnType === 'mohair') {
+    ctx.putImageData(out, 0, 0);
+    mohairize(c, chart, w, h, opts.seed ?? 1);
+    if (curl >= MIN_VISIBLE_CURL) {
+      const img = ctx.getImageData(0, 0, W, H);
+      ctx.putImageData(curlPixels(img, curl), 0, 0);
+    }
+  } else {
+    ctx.putImageData(curl >= MIN_VISIBLE_CURL ? curlPixels(out, curl) : out, 0, 0);
+  }
   return c;
 }
 
-function drawFringe(ctx: CanvasRenderingContext2D, chart: KnitChart, opts: ScarfRenderOptions, offsetX: number, edgeY: number, dir: 1 | -1, row: number, squeeze = 1) {
+/** Below this the roll isn't visible, so skip the (per-pixel) curl pass. */
+const MIN_VISIBLE_CURL = 0.1;
+
+/** Alpha-blend a sprite into an RGBA buffer at integer position (dx, dy). */
+function blit(dst: Uint8ClampedArray, W: number, H: number, s: ImageData, dx: number, dy: number) {
+  const sd = s.data;
+  for (let y = 0; y < s.height; y++) {
+    const ty = dy + y;
+    if (ty < 0 || ty >= H) continue;
+    for (let x = 0; x < s.width; x++) {
+      const tx = dx + x;
+      if (tx < 0 || tx >= W) continue;
+      const si = (y * s.width + x) * 4;
+      const a = sd[si + 3];
+      if (a === 0) continue;
+      const di = (ty * W + tx) * 4;
+      if (a === 255) {
+        dst[di] = sd[si];
+        dst[di + 1] = sd[si + 1];
+        dst[di + 2] = sd[si + 2];
+        dst[di + 3] = 255;
+      } else {
+        const f = a / 255;
+        dst[di] = sd[si] * f + dst[di] * (1 - f);
+        dst[di + 1] = sd[si + 1] * f + dst[di + 1] * (1 - f);
+        dst[di + 2] = sd[si + 2] * f + dst[di + 2] * (1 - f);
+        dst[di + 3] = Math.max(dst[di + 3], a);
+      }
+    }
+  }
+}
+
+function drawFringe(ctx: Ctx2D, chart: KnitChart, opts: ScarfRenderOptions, offsetX: number, edgeY: number, dir: 1 | -1, row: number, squeeze = 1) {
   const w = opts.stitchPx;
   const len = w * 10;
   const rand = mulberry32((opts.seed ?? 1) + (dir > 0 ? 11 : 23));
@@ -322,7 +390,114 @@ function drawFringe(ctx: CanvasRenderingContext2D, chart: KnitChart, opts: Scarf
 }
 
 /** Full scarf mockup with drape, fringe and shadow on a transparent canvas. */
-export function renderScarf(source: KnitChart, opts: ScarfRenderOptions): HTMLCanvasElement {
+/**
+ * Lighting for a gently draped scarf: a low-resolution height field (the scarf
+ * tilting as it snakes, plus a few soft folds that come and go) shaded by a
+ * light from the upper left. Returned as an overlay map (mid-grey = no change).
+ */
+function drapeLighting(fw: number, fh: number, period: number, seed: number): Canvas {
+  const gw = 24;
+  const gh = Math.max(8, Math.round(fh / 16));
+  const sx = fw / gw;
+  const sy = fh / gh;
+  const rand = mulberry32(seed * 17 + 3);
+  const folds = Array.from({ length: Math.max(2, Math.round(fh / (fw * 2.2))) }, () => ({
+    c: 0.25 + rand() * 0.5,
+    slope: (rand() - 0.5) * 0.35,
+    y: rand() * fh,
+    len: fw * (1.6 + rand() * 2),
+    width: 0.14 + rand() * 0.12,
+    amp: fw * (0.04 + rand() * 0.04) * (rand() < 0.75 ? 1 : -1),
+  }));
+  const height = (u: number, y: number) => {
+    // The scarf tilts across its width as it bends (matches the sideways wave).
+    let h = (u - 0.5) * fw * 0.22 * Math.cos((y / period) * Math.PI * 2);
+    for (const f of folds) {
+      const dy = (y - f.y) / f.len;
+      if (Math.abs(dy) > 1.5) continue;
+      const centre = f.c + f.slope * dy;
+      h += f.amp * Math.exp(-(((u - centre) / f.width) ** 2)) * Math.exp(-dy * dy * 2);
+    }
+    return h;
+  };
+  const c = makeCanvas(gw, gh);
+  const ctx = ctx2d(c);
+  const img = ctx.createImageData(gw, gh);
+  const L = [-0.45, -0.55, 0.7];
+  const Ln = Math.hypot(L[0], L[1], L[2]);
+  const flat = L[2] / Ln;
+  for (let j = 0; j < gh; j++)
+    for (let i = 0; i < gw; i++) {
+      const u = (i + 0.5) / gw;
+      const y = (j + 0.5) * sy;
+      const dx = (height(u + 0.5 / gw, y) - height(u - 0.5 / gw, y)) / sx;
+      const dy = (height(u, y + sy / 2) - height(u, y - sy / 2)) / sy;
+      const n = [-dx, -dy, 1];
+      const nn = Math.hypot(n[0], n[1], n[2]);
+      const lit = (n[0] * L[0] + n[1] * L[1] + n[2] * L[2]) / (nn * Ln) / flat;
+      const v = Math.max(0, Math.min(255, 128 + (lit - 1) * 95));
+      const k = (j * gw + i) * 4;
+      img.data[k] = img.data[k + 1] = img.data[k + 2] = v;
+      img.data[k + 3] = 255;
+    }
+  ctx.putImageData(img, 0, 0);
+  return c;
+}
+
+/** Short hash of a chart's content, so identical charts share cache entries (also across a worker boundary). */
+function chartKey(c: KnitChart): string {
+  let h = 2166136261;
+  const mixIn = (n: number) => {
+    h ^= n;
+    h = Math.imul(h, 16777619);
+  };
+  mixIn(c.w);
+  mixIn(c.h);
+  for (const v of c.cells) mixIn(v);
+  for (const v of c.stitch) mixIn(v + 7);
+  const meta = JSON.stringify([c.yarns.map((y) => y.hex), c.gaugeSts, c.gaugeRows, c.borderStyle, c.borderSts]);
+  for (let i = 0; i < meta.length; i++) mixIn(meta.charCodeAt(i));
+  return (h >>> 0).toString(36);
+}
+
+/** Recently rendered scarves keyed by chart content + options (small LRU). */
+const cache = new Map<string, Canvas>();
+
+/**
+ * Render the knitted scarf. Results are cached, so switching views, scenes or
+ * typing a gift message doesn't re-knit the whole thing. Treat the result as read-only.
+ */
+export function renderScarf(source: KnitChart, opts: ScarfRenderOptions): Canvas {
+  const key = chartKey(source) + JSON.stringify(opts);
+  const hit = cache.get(key);
+  if (hit) {
+    cache.delete(key);
+    cache.set(key, hit);
+    return hit;
+  }
+  const out = renderScarfUncached(source, opts);
+  cache.set(key, out);
+  if (cache.size > 8) cache.delete(cache.keys().next().value!);
+  return out;
+}
+
+/**
+ * Quarter-size soft silhouette of `src` in one colour (for shadows and halos).
+ * Uses the canvas shadow trick — draw the image off-canvas and keep only its
+ * blurred shadow — which works in every browser (ctx.filter doesn't in Safari).
+ */
+function softCopy(src: Canvas, blurPx: number, color: string): Canvas {
+  const k = 4;
+  const c = makeCanvas(src.width / k, src.height / k);
+  const ctx = ctx2d(c);
+  ctx.shadowColor = color;
+  ctx.shadowBlur = Math.max(1, blurPx / k);
+  ctx.shadowOffsetX = c.width + 10;
+  ctx.drawImage(src, -c.width - 10, 0, c.width, c.height);
+  return c;
+}
+
+function renderScarfUncached(source: KnitChart, opts: ScarfRenderOptions): Canvas {
   const chart = applyColorChange(source, opts);
   const fabric = renderFabric(chart, opts);
   const w = opts.stitchPx;
@@ -331,66 +506,60 @@ export function renderScarf(source: KnitChart, opts: ScarfRenderOptions): HTMLCa
   const margin = w * 4 + amp;
   const outW = fabric.width + margin * 2;
   const outH = fabric.height + fringeLen * 2 + margin * 2;
-  const v = makeCanvas(outW, outH);
-  const ctx = v.getContext('2d')!;
   const top = margin + fringeLen;
   const period = fabric.height / 2.3;
   const waveAt = (y: number) => (opts.drape ? Math.sin((y / period) * Math.PI * 2) * amp : 0);
 
+  // 1. The scarf itself (fringe + fabric following the wave) on its own layer.
+  const body = makeCanvas(outW, outH);
+  const bctx = ctx2d(body);
   if (opts.fringe) {
     // Curled ends are narrower, so the fringe gathers in too.
     const squeeze = 1 - 0.62 * 0.4 * effectiveCurl(chart, opts);
-    drawFringe(ctx, chart, opts, margin + waveAt(0), top, -1, 0, squeeze);
-    drawFringe(ctx, chart, opts, margin + waveAt(fabric.height), top + fabric.height, 1, chart.h - 1, squeeze);
+    drawFringe(bctx, chart, opts, margin + waveAt(0), top, -1, 0, squeeze);
+    drawFringe(bctx, chart, opts, margin + waveAt(fabric.height), top + fabric.height, 1, chart.h - 1, squeeze);
   }
-
-  ctx.save();
-  if (opts.shadow) {
-    ctx.shadowColor = 'rgba(0,0,0,0.28)';
-    ctx.shadowBlur = w * 3;
-    ctx.shadowOffsetY = w * 1.2;
-    ctx.shadowOffsetX = w * 0.6;
-  }
-  const slice = 3;
-  if (opts.yarnType === 'mohair') {
-    // Soft fuzzy halo around the whole scarf.
-    ctx.save();
-    ctx.filter = `blur(${Math.max(2, w * 0.9)}px)`;
-    ctx.globalAlpha = 0.75;
-    for (let y = 0; y < fabric.height; y += slice * 4) {
-      const hgt = Math.min(slice * 4, fabric.height - y);
-      ctx.drawImage(fabric, 0, y, fabric.width, hgt, margin + waveAt(y), top + y, fabric.width, hgt);
-    }
-    ctx.restore();
-  }
+  const slice = opts.drape ? 3 : fabric.height;
   for (let y = 0; y < fabric.height; y += slice) {
     const hgt = Math.min(slice, fabric.height - y);
-    ctx.drawImage(fabric, 0, y, fabric.width, hgt, margin + waveAt(y), top + y, fabric.width, hgt + 0.6);
+    bctx.drawImage(fabric, 0, y, fabric.width, hgt, margin + waveAt(y), top + y, fabric.width, hgt + (opts.drape ? 0.6 : 0));
   }
-  ctx.restore();
 
+  // 2. Drape lighting, masked to the fabric and blended with "overlay".
   if (opts.drape) {
-    // Soft lengthwise folds: alternating light/dark bands across the width, following the wave.
-    ctx.save();
-    ctx.globalCompositeOperation = 'source-atop';
-    for (let y = 0; y < fabric.height; y += slice) {
-      const x0 = margin + waveAt(y);
-      const g = ctx.createLinearGradient(x0, 0, x0 + fabric.width, 0);
-      g.addColorStop(0, 'rgba(0,0,0,0.16)');
-      g.addColorStop(0.18, 'rgba(255,255,255,0.10)');
-      g.addColorStop(0.42, 'rgba(0,0,0,0.10)');
-      g.addColorStop(0.65, 'rgba(255,255,255,0.12)');
-      g.addColorStop(0.86, 'rgba(0,0,0,0.08)');
-      g.addColorStop(1, 'rgba(0,0,0,0.18)');
-      ctx.fillStyle = g;
-      ctx.fillRect(x0, top + y, fabric.width, slice + 0.6);
+    const light = drapeLighting(fabric.width, fabric.height, period, opts.seed ?? 1);
+    const layer = makeCanvas(outW, outH);
+    const lctx = ctx2d(layer);
+    const chunk = 12;
+    const ls = light.height / fabric.height;
+    for (let y = 0; y < fabric.height; y += chunk) {
+      const hgt = Math.min(chunk, fabric.height - y);
+      lctx.drawImage(light, 0, y * ls, light.width, hgt * ls, margin + waveAt(y), top + y, fabric.width, hgt + 0.6);
     }
-    ctx.restore();
+    lctx.globalCompositeOperation = 'destination-in';
+    lctx.drawImage(body, 0, 0);
+    bctx.save();
+    bctx.globalCompositeOperation = 'overlay';
+    bctx.drawImage(layer, 0, 0);
+    bctx.restore();
   }
+
+  // 3. Compose: mohair halo and the drop shadow are applied once to the whole layer.
+  // Blurs are done on a quarter-size copy and scaled back up: shadows and halos are
+  // soft anyway, and blurring a full-size scarf is the slowest step otherwise.
+  const v = makeCanvas(outW, outH);
+  const ctx = ctx2d(v);
+  if (opts.shadow) ctx.drawImage(softCopy(body, w * 3, 'rgba(0,0,0,0.32)'), w * 0.6, w * 1.2, outW, outH);
+  if (opts.yarnType === 'mohair') {
+    // Fuzzy halo in the main yarn's colour.
+    const [r, g, b] = hexToRgb(shade(chart.yarns[0].hex, 0.15));
+    ctx.drawImage(softCopy(body, Math.max(4, w * 1.6), `rgba(${r},${g},${b},0.85)`), 0, 0, outW, outH);
+  }
+  ctx.drawImage(body, 0, 0);
 
   if (opts.orientation === 'vertical') return v;
   const hz = makeCanvas(outH, outW);
-  const hctx = hz.getContext('2d')!;
+  const hctx = ctx2d(hz);
   hctx.translate(outH, 0);
   hctx.rotate(Math.PI / 2);
   hctx.drawImage(v, 0, 0);

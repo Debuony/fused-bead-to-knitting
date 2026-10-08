@@ -289,15 +289,28 @@
     "done": "Your scarf is ready!",
     "rows": "Row {{n}} / {{total}}",
     "jump": "Jump to the finished scarf",
-    "hint": "Help the machine: hold SPACE or just type anything to knit · ← → push the carriage · or drag it."
+    "hint": "Help the machine: hold SPACE or just type anything to knit · ← → push the carriage · or drag it.",
+    "threading": "Threading the yarn…"
   },
   "mockup": {
     "trench": "Trench coat",
     "y2k": "Y2K",
     "giftbox": "Gift box",
     "flatlay": "Flat lay",
-    "tag": "Gift tag text",
     "defaultTag": "handmade with love ♡",
-    "download": "Download mockup"
+    "download": "Download mockup",
+    "person": "Person",
+    "skin": "Skin tone",
+    "hairColor": "Hair colour",
+    "showMessage": "Add a gift message",
+    "showBeads": "Show the original bead piece",
+    "hair": {
+      "long": "Long",
+      "bob": "Bob",
+      "ponytail": "Ponytail",
+      "buns": "Space buns",
+      "curly": "Curly",
+      "pixie": "Pixie"
+    }
   }
 }

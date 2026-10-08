@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActionRail } from '../components/ActionRail';
 import { Slider } from '../components/Field';
-import { autoCrop } from '../lib/auto';
+import { compute } from '../lib/renderClient';
 import { runFullAuto } from '../lib/autoPipeline';
 import { FULL_CROP, canvasImageData, loadImage, normaliseUpload, readFileAsDataUrl, transformImage, workingImage, type CropRect } from '../lib/imageUtils';
 import { backgroundQuality } from '../lib/pixelize';
@@ -58,7 +58,7 @@ export function UploadStep() {
   const doAutoCrop = async () => {
     if (!image) return;
     const full = await workingImage(image, rotation, FULL_CROP, 600);
-    setTransform({ crop: autoCrop(canvasImageData(full)) });
+    setTransform({ crop: await compute({ kind: 'autoCrop', img: canvasImageData(full) }) });
   };
 
   const oneClick = async () => {

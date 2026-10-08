@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { Grid } from '../lib/grid';
 import { FULL_CROP, type CropRect } from '../lib/imageUtils';
 import { DEFAULT_CHART_OPTIONS, type ChartOptions } from '../lib/knitChart';
+import { DEFAULT_MOCKUP_OPTIONS, type MockupOptions } from '../lib/mockup';
 import { DEFAULT_SCARF_OPTIONS, type ScarfRenderOptions } from '../lib/scarfRender';
 import { useSettings } from './settingsStore';
 
@@ -44,6 +45,7 @@ interface ProjectState {
   future: Grid[];
   chartOptions: ChartOptions;
   scarfOptions: ScarfRenderOptions;
+  mockupOptions: MockupOptions;
 
   goTo: (s: Step) => void;
   setImage: (dataUrl: string | null) => void;
@@ -59,6 +61,7 @@ interface ProjectState {
   redo: () => void;
   setChartOptions: (patch: Partial<ChartOptions>) => void;
   setScarfOptions: (patch: Partial<ScarfRenderOptions>) => void;
+  setMockupOptions: (patch: Partial<MockupOptions>) => void;
   resetProject: () => void;
 }
 
@@ -76,6 +79,7 @@ export const useProject = create<ProjectState>()(
       future: [],
       chartOptions: DEFAULT_CHART_OPTIONS,
       scarfOptions: DEFAULT_SCARF_OPTIONS,
+      mockupOptions: DEFAULT_MOCKUP_OPTIONS,
 
       goTo: (s) => set((st) => ({ step: s, maxStep: (Math.max(st.maxStep, s) as Step) })),
       setImage: (image) => set({ image, rotation: 0, crop: FULL_CROP, pixelOptions: defaultPixelOptions() }),
@@ -104,6 +108,7 @@ export const useProject = create<ProjectState>()(
         }),
       setChartOptions: (patch) => set((st) => ({ chartOptions: { ...st.chartOptions, ...patch } })),
       setScarfOptions: (patch) => set((st) => ({ scarfOptions: { ...st.scarfOptions, ...patch } })),
+      setMockupOptions: (patch) => set((st) => ({ mockupOptions: { ...st.mockupOptions, ...patch } })),
       resetProject: () =>
         set({ step: 0, maxStep: 0, image: null, rotation: 0, crop: FULL_CROP, grid: null, past: [], future: [] }),
     }),
@@ -117,6 +122,7 @@ export const useProject = create<ProjectState>()(
         grid: s.grid,
         chartOptions: s.chartOptions,
         scarfOptions: s.scarfOptions,
+        mockupOptions: s.mockupOptions,
       }),
       merge: (persisted, current) => {
         const p = persisted as Partial<ProjectState>;
@@ -126,6 +132,7 @@ export const useProject = create<ProjectState>()(
           // Fill in options added in later versions.
           chartOptions: { ...DEFAULT_CHART_OPTIONS, ...p.chartOptions },
           scarfOptions: { ...DEFAULT_SCARF_OPTIONS, ...p.scarfOptions },
+          mockupOptions: { ...DEFAULT_MOCKUP_OPTIONS, ...p.mockupOptions },
         };
         // Without a photo or grid, earlier steps can't be resumed.
         if (!merged.grid) return { ...merged, step: 0, maxStep: 0 };
